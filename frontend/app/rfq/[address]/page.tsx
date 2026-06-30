@@ -155,8 +155,14 @@ export default function RFQDetailPage() {
 
       {finalized && !winnerRevealed && (
         <p className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-          RFQ finalized. Winner reveal via Zama gateway callback will be
-          available in Phase 3B.
+          RFQ finalized.{" "}
+          <a
+            href={`/debug/reveal?address=${rfqAddress}`}
+            className="underline hover:text-blue-900"
+          >
+            Reveal the winner at /debug/reveal
+          </a>{" "}
+          (Sepolia only).
         </p>
       )}
 
