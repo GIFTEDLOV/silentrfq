@@ -53,9 +53,11 @@ export function useFinalize(address: `0x${string}`) {
     reset,
   } = useWriteContract();
 
-  const { isPending: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isPending: _isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
+    query: { enabled: !!hash },
   });
+  const isConfirming = !!hash && _isConfirming;
 
   const finalize = () => {
     writeContract({

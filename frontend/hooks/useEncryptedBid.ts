@@ -34,9 +34,13 @@ export function useEncryptedBid() {
     reset,
   } = useWriteContract();
 
-  const { isPending: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isPending: _isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
+    // Without enabled guard, TanStack Query v5 reports isPending:true from first
+    // render (no data yet = pending state), causing phantom "Confirming..." UI.
+    query: { enabled: !!hash },
   });
+  const isConfirming = !!hash && _isConfirming;
 
   const initSdk = async () => {
     if (sdkStatus === "ready" || sdkStatus === "initializing") return;

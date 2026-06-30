@@ -24,9 +24,14 @@ export function useCreateRFQ() {
     reset,
   } = useWriteContract();
 
-  const { isPending: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isPending: _isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
+    // Without enabled guard, TanStack Query v5 reports isPending:true from first
+    // render (no cached data = pending state), causing phantom "Confirming..." UI.
+    query: { enabled: !!hash },
   });
+  // Also guard on hash so isConfirming is never true without an actual tx.
+  const isConfirming = !!hash && _isConfirming;
 
   const create = (description: string, deadline: bigint) => {
     if (!FACTORY_ADDRESS) return;
