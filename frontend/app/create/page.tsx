@@ -73,73 +73,79 @@ export default function CreatePage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">Create RFQ</h1>
+    <div className="space-y-5 max-w-xl">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Create Confidential RFQ</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Post a request and let vendors submit encrypted price quotes. Bid amounts are
+          never visible on-chain.
+        </p>
+      </div>
 
       {!FACTORY_ADDRESS && (
-        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">
           {FACTORY_MISSING_MESSAGE}
         </div>
       )}
 
       {!isConnected ? (
-        <div className="rounded border border-gray-200 bg-white p-4 space-y-2">
-          <p className="text-sm text-gray-600">
-            Connect your wallet to create an RFQ.
-          </p>
+        <div className="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
+          <p className="text-sm text-gray-600">Connect your wallet to create an RFQ.</p>
           <WalletConnect />
         </div>
       ) : (
         <NetworkGuard>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. 500 units of industrial bolts, M8 x 30mm"
-                required
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
-              />
-            </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. 500 units of industrial bolts, M8 x 30mm"
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bid Deadline
-              </label>
-              <input
-                type="datetime-local"
-                value={deadlineInput}
-                onChange={handleDeadlineChange}
-                required
-                className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
-                  deadlineError
-                    ? "border-red-400 focus:ring-red-300"
-                    : "border-gray-300 focus:ring-gray-400"
-                }`}
-              />
-              {deadlineError && (
-                <p className="mt-1 text-xs text-red-600">{deadlineError}</p>
-              )}
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bid Deadline
+                </label>
+                <input
+                  type="datetime-local"
+                  value={deadlineInput}
+                  onChange={handleDeadlineChange}
+                  required
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
+                    deadlineError
+                      ? "border-red-400 focus:ring-red-300"
+                      : "border-gray-300 focus:ring-gray-400"
+                  }`}
+                />
+                {deadlineError && (
+                  <p className="mt-1 text-xs text-red-600">{deadlineError}</p>
+                )}
+              </div>
 
-            <button
-              type="submit"
-              disabled={
-                !FACTORY_ADDRESS || !!deadlineError || isPending || isConfirming
-              }
-              className="rounded bg-gray-900 text-white px-4 py-2 text-sm disabled:opacity-40 hover:bg-gray-700"
-            >
-              {isPending
-                ? "Waiting for wallet..."
-                : isConfirming
-                ? "Confirming..."
-                : "Create RFQ"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={
+                  !FACTORY_ADDRESS || !!deadlineError || isPending || isConfirming
+                }
+                className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+              >
+                {isPending
+                  ? "Waiting for wallet..."
+                  : isConfirming
+                  ? "Confirming..."
+                  : "Create RFQ"}
+              </button>
+            </form>
+          </div>
 
           <TxStatus
             isPending={isPending}
