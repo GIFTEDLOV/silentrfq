@@ -4,6 +4,7 @@ import { ethers, fhevm } from "hardhat";
 import { SilentRFQ, SilentRFQ__factory } from "../types";
 import { expect } from "chai";
 import { FhevmType } from "@fhevm/hardhat-plugin";
+import { relayer } from "@fhevm/mock-utils";
 
 type Signers = {
   buyer: HardhatEthersSigner;
@@ -67,10 +68,35 @@ describe("SilentRFQ", function () {
     return fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.buyer);
   };
 
-  // Decrypt _bestVendorIndex as buyer — only valid after finalize() grants FHE.allow(buyer)
+  // Public-decrypt _bestVendorIndex — valid after finalize() calls makePubliclyDecryptable.
+  // No signer required: the index is publicly decryptable by anyone via the Zama gateway.
   const decryptBestVendorIndex = async (): Promise<bigint> => {
     const handle = await contract.getBestVendorIndex();
-    return fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, signers.buyer);
+    return fhevm.publicDecryptEuint(FhevmType.euint64, handle);
+  };
+
+  // Build the three arguments for callbackRevealWinner by querying the mock relayer.
+  // Requires finalize() to have been called first (makePubliclyDecryptable must be set).
+  const getCallbackArgs = async (): Promise<{
+    handlesList: string[];
+    abiEncodedCleartexts: string;
+    decryptionProof: string;
+  }> => {
+    const handle = await contract.getBestVendorIndex();
+    const extraData = ethers.solidityPacked(["uint8"], [0]); // 0x00 — v0 extraData
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await relayer.requestRelayerV1PublicDecrypt(ethers.provider as any, {
+      ciphertextHandles: [handle],
+      extraData,
+    });
+    const { decrypted_value: abiEncodedCleartexts, signatures } = result.response[0];
+    // Pack: uint8(N) || sig_0 ... sig_{N-1} || extraData (0x00)
+    const decryptionProof = ethers.concat([
+      ethers.solidityPacked(["uint8"], [signatures.length]),
+      ...signatures.map((s: string) => ethers.getBytes(s)),
+      ethers.getBytes(extraData),
+    ]);
+    return { handlesList: [handle], abiEncodedCleartexts, decryptionProof };
   };
 
   // ─── Deployment ────────────────────────────────────────────────────────────
@@ -313,6 +339,142 @@ describe("SilentRFQ", function () {
       await expect(
         contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0),
       ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
+    });
+  });
+
+  // ─── callbackRevealWinner ──────────────────────────────────────────────────
+
+  describe("callbackRevealWinner (gateway path)", function () {
+    it("rejects if not finalized", async function () {
+      await submitBid(signers.alice, 100);
+      const { handlesList, abiEncodedCleartexts } = {
+        handlesList: [await contract.getBestVendorIndex()],
+        abiEncodedCleartexts: ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [0]),
+      };
+      // Use a dummy proof — should revert on NotFinalized before reaching signature check
+      const dummyProof = ethers.concat([ethers.solidityPacked(["uint8"], [0]), ethers.getBytes("0x00")]);
+      await expect(
+        contract.callbackRevealWinner(handlesList, abiEncodedCleartexts, dummyProof),
+      ).to.be.revertedWithCustomError(contract, "NotFinalized");
+    });
+
+    it("rejects if winner already revealed via callbackRevealWinner", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      // First call succeeds
+      await (await contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof)).wait();
+      // Second call must revert
+      await expect(
+        contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof),
+      ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
+    });
+
+    it("rejects if winner already revealed via revealWinnerFromDecryptedIndex", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      // Reveal via the local/mock path first
+      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0)).wait();
+      // Then try the gateway callback — must also reject
+      const args = await getCallbackArgs();
+      await expect(
+        contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof),
+      ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
+    });
+
+    it("rejects if handlesList is empty", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      await expect(
+        contract.callbackRevealWinner([], args.abiEncodedCleartexts, args.decryptionProof),
+      ).to.be.revertedWithCustomError(contract, "InvalidDecryptionHandles");
+    });
+
+    it("rejects if handlesList contains wrong handle", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      const wrongHandles = [ethers.ZeroHash]; // bytes32(0) — not the _bestVendorIndex handle
+      await expect(
+        contract.callbackRevealWinner(wrongHandles, args.abiEncodedCleartexts, args.decryptionProof),
+      ).to.be.revertedWithCustomError(contract, "InvalidDecryptionHandles");
+    });
+
+    it("rejects tampered decryptionProof (zeroed signatures)", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      // Build a structurally valid proof (right length) but with a zeroed 65-byte signature.
+      // ECDSA recovery of zeros returns an address that is not a registered KMS signer.
+      const fakeProof = ethers.concat([
+        ethers.solidityPacked(["uint8"], [1]),
+        new Uint8Array(65), // 65 zero bytes — invalid ECDSA signature
+        ethers.getBytes("0x00"), // extraData
+      ]);
+      await expect(
+        contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, fakeProof),
+      ).to.be.reverted; // KMSInvalidSigner from FHE library internals
+    });
+
+    it("succeeds with valid proof, stores correct winner index and winner address", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      const tx = await contract.callbackRevealWinner(
+        args.handlesList,
+        args.abiEncodedCleartexts,
+        args.decryptionProof,
+      );
+      await tx.wait();
+      expect(await contract.winnerRevealed()).to.eq(true);
+      expect(await contract.revealedWinnerIndex()).to.eq(0n);
+      expect(await contract.winnerAddress()).to.eq(signers.alice.address);
+    });
+
+    it("can be called by anyone — not restricted to buyer", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      // Carol (index 3) is not the buyer — callback is permissionless
+      const tx = await contract
+        .connect(signers.carol)
+        .callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof);
+      await tx.wait();
+      expect(await contract.winnerRevealed()).to.eq(true);
+      expect(await contract.winnerAddress()).to.eq(signers.alice.address);
+    });
+
+    it("full flow via gateway: Alice=100 Bob=50 Carol=200 — Bob wins", async function () {
+      await submitBid(signers.alice, 100);
+      await submitBid(signers.bob, 50);
+      await submitBid(signers.carol, 200);
+      await finalizeRFQ();
+
+      // winnerAddress must revert before reveal
+      await expect(contract.winnerAddress()).to.be.revertedWithCustomError(contract, "WinnerNotRevealed");
+
+      // Get gateway callback args — decrypts _bestVendorIndex (Bob = index 1)
+      const args = await getCallbackArgs();
+
+      // Confirm the decrypted index is 1 (Bob)
+      const decodedIndex = ethers.AbiCoder.defaultAbiCoder().decode(["uint256"], args.abiEncodedCleartexts)[0];
+      expect(decodedIndex).to.eq(1n);
+
+      // Anyone can call — use carol here
+      await (
+        await contract
+          .connect(signers.carol)
+          .callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof)
+      ).wait();
+
+      expect(await contract.winnerRevealed()).to.eq(true);
+      expect(await contract.revealedWinnerIndex()).to.eq(1n);
+      expect(await contract.winnerAddress()).to.eq(signers.bob.address);
+
+      // Buyer still decrypts the winning bid amount privately
+      const winningBid = await decryptBestBid();
+      expect(winningBid).to.eq(50n);
     });
   });
 

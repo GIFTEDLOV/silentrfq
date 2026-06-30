@@ -50,7 +50,7 @@ This is not obfuscation or off-chain privacy. It is cryptographic privacy enforc
 | Bid deadline (Unix timestamp) | Contract state |
 | Vendor addresses, in submission order | `vendors[]` array |
 | Number of bids submitted | `vendorCount()` |
-| Final winner address, after buyer reveals | `winnerAddress()` after `revealWinnerFromDecryptedIndex` |
+| Final winner address, after reveal | `winnerAddress()` after `callbackRevealWinner` (or mock fallback) |
 | Whether the RFQ has been finalized | `finalized` flag |
 
 ### Private (encrypted, never exposed)
@@ -106,27 +106,44 @@ After the deadline passes, the buyer calls `finalize()`. This:
 
 - Verifies the caller is the buyer, the deadline has passed, and at least one bid exists.
 - Sets `finalized = true`.
-- Calls `FHE.allow(_bestBid, buyer)` and `FHE.allow(_bestVendorIndex, buyer)` — granting the buyer (and only the buyer) off-chain decryption access to the winning bid amount and winning vendor index.
+- Calls `FHE.makePubliclyDecryptable(_bestVendorIndex)` — registers the winning vendor index with the Zama ACL so anyone with a valid KMS-signed proof can reveal it trustlessly via `callbackRevealWinner`.
+- Calls `FHE.allow(_bestBid, buyer)` — the winning bid amount stays private, readable only by the buyer.
 
-No other party is granted decrypt access. Losing bid ciphertexts remain on-chain but their plaintext values are permanently unreadable without an `FHE.allow` grant — which is never issued for losing bids.
+Losing bid ciphertexts remain on-chain but permanently unreadable without an `FHE.allow` grant — which is never issued for losing bids.
 
-### 4. Buyer reveals the winner
+### 4. Winner is revealed via public decryption callback
 
-The buyer decrypts `_bestVendorIndex` off-chain using their wallet and the Zama SDK. They then call `revealWinnerFromDecryptedIndex(uint256 index)` to record the winner index on-chain. `winnerAddress()` maps that index to the vendor's address from the public `vendors[]` array.
+After `finalize()`, anyone queries the Zama relayer with `_bestVendorIndex` handle and receives `{ decrypted_value, signatures }` — the ABI-encoded winner index and KMS signatures. They then call:
+
+```solidity
+callbackRevealWinner(bytes32[] handlesList, bytes abiEncodedCleartexts, bytes decryptionProof)
+```
+
+This function:
+
+1. Verifies `handlesList` contains exactly `_bestVendorIndex` for this contract — prevents substituting a proof for a different ciphertext.
+2. Calls `FHE.checkSignatures(handlesList, abiEncodedCleartexts, decryptionProof)` — verifies KMS signatures on-chain. Reverts if invalid. No trust in the caller is needed.
+3. Decodes `uint256 index = abi.decode(abiEncodedCleartexts, (uint256))` and stores it as `revealedWinnerIndex`.
+4. Emits `WinnerRevealed`. `winnerAddress()` returns the vendor from `vendors[revealedWinnerIndex]`.
+
+**This is the primary Sepolia settlement path.** Winner reveal requires no buyer action and no trusted third party — only a valid KMS-signed proof from the Zama gateway.
+
+The `decryptionProof` byte layout (from `FHE.sol`):
+```
+byte[0]            = numSigners (uint8)
+bytes[1..65]       = signature_0 (65 bytes, ECDSA)
+bytes[66..130]     = signature_1 (if threshold > 1)
+...
+bytes[trailing]    = extraData (0x00 for v0)
+```
 
 ---
 
-## Current Limitation: Winner Reveal is Mock/Local MVP Only
+## Local/Mock Fallback: revealWinnerFromDecryptedIndex
 
-`revealWinnerFromDecryptedIndex` is a **local and mock testing shortcut only**. It accepts the winner index as a buyer-submitted parameter, which means it does not cryptographically enforce on-chain that the submitted index matches the actual encrypted best vendor index.
+`revealWinnerFromDecryptedIndex(uint256 index)` is a **local and mock testing shortcut only**. It accepts the winner index as a buyer-submitted parameter without cryptographic enforcement. It exists so the existing mock test suite can cover winner-reveal flows without running the Zama relayer.
 
-The production Sepolia version must replace this function with the **Zama public decryption gateway callback** pattern:
-
-1. Contract emits a decryption request for `_bestVendorIndex`.
-2. The Zama KMS gateway processes the request and calls back with a KMS-signed plaintext proof.
-3. The callback function verifies the proof and stores `revealedWinnerIndex` trustlessly — with no buyer input required.
-
-This is the correct trustless settlement path and is planned for the Sepolia deployment phase.
+**Do not rely on this function for trustless settlement.** Use `callbackRevealWinner` on Sepolia.
 
 ---
 
@@ -138,7 +155,7 @@ silentrfq/
 │   ├── SilentRFQ.sol       # Main contract — confidential RFQ bidding
 │   └── FHECounter.sol      # Zama template example (unchanged)
 ├── test/
-│   ├── SilentRFQ.ts        # SilentRFQ test suite (27 tests)
+│   ├── SilentRFQ.ts        # SilentRFQ test suite (35 tests)
 │   └── FHECounter.ts       # Template example tests (unchanged)
 ├── deploy/
 │   └── deploy.ts           # Template deploy script
@@ -178,11 +195,11 @@ npm run test
 ## Test Status
 
 ```
-28 passing
+36 passing
  1 pending  ← Sepolia-only template test, correctly skipped on local
 ```
 
-All 27 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
+All 35 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
 
 - Deployment initial state (including `winnerRevealed = false`)
 - Constructor rejection for past or equal-to-now deadline (`InvalidDeadline`)
@@ -195,11 +212,13 @@ All 27 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment
 - Three-vendor scenario with middle vendor winning
 - Vendor registration order
 - Finalize: non-buyer rejection, pre-deadline rejection, no-bids rejection, success, exact-deadline-boundary success, double-finalize rejection
-- Winner reveal: pre-finalize rejection, non-buyer rejection, invalid index rejection
+- `callbackRevealWinner`: rejects if not finalized, rejects if already revealed, rejects empty handles list, rejects wrong handle, rejects tampered proof, succeeds with valid KMS proof, callable by anyone (not just buyer)
+- `revealWinnerFromDecryptedIndex`: pre-finalize rejection, non-buyer rejection, invalid index rejection
 - `winnerAddress()` reverts with `WinnerNotRevealed` before reveal
 - `winnerRevealed` transitions from false to true on first reveal
-- Second reveal call rejected with `WinnerAlreadyRevealed`
-- Full end-to-end happy path: Alice=100, Bob=50, Carol=200 → Bob wins → `winnerAddress()` guarded until reveal → winner address confirmed → winning bid decrypted by buyer only
+- Second reveal call (both paths) rejected with `WinnerAlreadyRevealed`
+- Full end-to-end happy path (gateway path): Alice=100, Bob=50, Carol=200 → Bob wins → `callbackRevealWinner` with KMS proof → winner confirmed → winning bid decrypted by buyer only
+- Full end-to-end happy path (mock fallback path): same scenario using `revealWinnerFromDecryptedIndex`
 
 ---
 
@@ -210,7 +229,8 @@ All 27 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment
 | Contract proof (`SilentRFQ.sol`) | Complete |
 | TypeScript test suite | Complete |
 | Local FHEVM mock testing | Complete |
-| Sepolia deployment + Zama gateway callback | Planned |
+| Zama public decryption gateway callback (`callbackRevealWinner`) | Complete |
+| Sepolia deployment | Planned |
 | Minimal frontend (Next.js + Zama SDK) | Planned |
 | Demo video | Planned |
 

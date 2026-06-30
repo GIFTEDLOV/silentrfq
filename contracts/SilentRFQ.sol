@@ -46,6 +46,7 @@ contract SilentRFQ is ZamaEthereumConfig {
     error WinnerNotRevealed();
     error WinnerAlreadyRevealed();
     error TooManyVendors();
+    error InvalidDecryptionHandles();
 
     constructor(string memory _description, uint256 _deadline) {
         if (_deadline <= block.timestamp) revert InvalidDeadline();
@@ -111,24 +112,65 @@ contract SilentRFQ is ZamaEthereumConfig {
 
         finalized = true;
 
-        // Grant buyer permission to decrypt the winning index and bid amount off-chain.
-        // No other party receives access; losing bid ciphertexts remain on-chain but
-        // their plaintext values are permanently inaccessible without an FHE.allow grant.
+        // Mark _bestVendorIndex for public decryption by the Zama gateway.
+        // After finalization, anyone with a valid KMS-signed proof can call
+        // callbackRevealWinner to reveal the winner trustlessly.
+        FHE.makePubliclyDecryptable(_bestVendorIndex);
+
+        // Winning bid amount stays private — only the buyer receives decrypt access.
+        // Losing bid ciphertexts remain on-chain but permanently unreadable without
+        // an FHE.allow grant, which is never issued for losing bids.
         FHE.allow(_bestBid, buyer);
-        FHE.allow(_bestVendorIndex, buyer);
 
         emit RFQFinalized(buyer);
     }
 
-    /// @notice MVP LOCAL-MOCK ONLY: buyer submits the winner index they decrypted off-chain.
-    ///         Does NOT cryptographically enforce on-chain that the index is the true best bidder.
-    /// @dev    TODO: Before Sepolia deployment, replace with a Zama public decryption gateway callback:
-    ///         emit a decryption request event → gateway calls back with KMS-verified plaintext
-    ///         → callback stores revealedWinnerIndex trustlessly, with no buyer input required.
+    /// @notice LOCAL/MOCK ONLY — buyer submits the winner index they decrypted off-chain.
+    ///         Does NOT verify on-chain that the index matches the encrypted best vendor.
+    ///         Use callbackRevealWinner for trustless settlement on Sepolia.
     function revealWinnerFromDecryptedIndex(uint256 index) external {
         if (msg.sender != buyer) revert NotBuyer();
         if (!finalized) revert NotFinalized();
         if (winnerRevealed) revert WinnerAlreadyRevealed();
+        if (index >= vendors.length) revert InvalidWinnerIndex();
+
+        revealedWinnerIndex = index;
+        winnerRevealed = true;
+        emit WinnerRevealed(index, vendors[index]);
+    }
+
+    /// @notice Trustless winner reveal via Zama public decryption gateway callback.
+    ///         This is the Sepolia-ready settlement path. Anyone can call this function
+    ///         with a valid KMS-signed proof — no trust in the caller is required because
+    ///         FHE.checkSignatures verifies the proof on-chain against the registered KMS.
+    ///
+    /// @param handlesList          Must be exactly one element: euint64.unwrap(_bestVendorIndex).
+    ///                             Verified against this contract's actual handle to prevent
+    ///                             an attacker from supplying a proof for a different ciphertext.
+    /// @param abiEncodedCleartexts ABI-encoded decrypted value from the KMS gateway.
+    ///                             Format: abi.encode(uint256 winnerIndex)
+    ///                             NOTE: the KMS always encodes FHE types as uint256, not euint64.
+    /// @param decryptionProof      Packed KMS signature bytes.
+    ///                             Format: uint8(N) || sig_0 (65 bytes) || ... || sig_{N-1} || extraData (0x00)
+    function callbackRevealWinner(
+        bytes32[] calldata handlesList,
+        bytes calldata abiEncodedCleartexts,
+        bytes calldata decryptionProof
+    ) external {
+        if (!finalized) revert NotFinalized();
+        if (winnerRevealed) revert WinnerAlreadyRevealed();
+
+        // Verify the handles list targets exactly _bestVendorIndex for this contract.
+        // Without this check an attacker could supply a valid KMS proof for a ciphertext
+        // they control to set an arbitrary winner index.
+        bytes32 expectedHandle = euint64.unwrap(_bestVendorIndex);
+        if (handlesList.length != 1 || handlesList[0] != expectedHandle) revert InvalidDecryptionHandles();
+
+        // Verify KMS signatures on-chain. Reverts with InvalidKMSSignatures if invalid.
+        FHE.checkSignatures(handlesList, abiEncodedCleartexts, decryptionProof);
+
+        // KMS encodes all FHE primitive types as uint256 in the ABI-encoded result.
+        uint256 index = abi.decode(abiEncodedCleartexts, (uint256));
         if (index >= vendors.length) revert InvalidWinnerIndex();
 
         revealedWinnerIndex = index;
@@ -152,8 +194,8 @@ contract SilentRFQ is ZamaEthereumConfig {
         return vendors.length;
     }
 
-    /// @notice Returns the winner address. Reverts until the buyer has called
-    ///         revealWinnerFromDecryptedIndex after finalization.
+    /// @notice Returns the winner address. Reverts until callbackRevealWinner
+    ///         (or revealWinnerFromDecryptedIndex in local mock) has been called.
     function winnerAddress() external view returns (address) {
         if (!winnerRevealed) revert WinnerNotRevealed();
         return vendors[revealedWinnerIndex];
