@@ -23,3 +23,10 @@ tmp
 coverage.json
 pnpm-lock.yaml
 yarn.lock
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+frontend/.env.local
+

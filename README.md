@@ -231,6 +231,61 @@ npm run test
 
 ---
 
+## Frontend Development (Phase 3A)
+
+The frontend is a minimal Next.js app in the `frontend/` directory. It reads RFQ state and lets buyers create and finalize RFQs. Encrypted bid submission is Phase 3B.
+
+### Setup
+
+**1. Start a local Hardhat node (separate terminal)**
+
+```bash
+npx hardhat node
+```
+
+**2. Deploy SilentRFQFactory to the local node**
+
+```bash
+npx hardhat run scripts/deployFactory.ts --network localhost
+```
+
+Copy the printed `NEXT_PUBLIC_FACTORY_ADDRESS=0x...` line.
+
+**3. Configure the frontend**
+
+```bash
+cd frontend
+cp .env.local.example .env.local
+# Paste the factory address into .env.local
+```
+
+**4. Install frontend dependencies and start the dev server**
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Pages
+
+| Route | Description |
+|---|---|
+| `/` | Home — wallet connect, links to create/browse |
+| `/create` | Create a new RFQ (description + deadline) |
+| `/rfqs` | List all RFQs from the factory |
+| `/rfq/[address]` | RFQ detail — state, finalize button |
+
+### Build
+
+```bash
+cd frontend
+npm run build
+```
+
+---
+
 ## Build Roadmap
 
 | Phase | Status |
@@ -241,7 +296,8 @@ npm run test
 | Local FHEVM mock testing | Complete |
 | Zama public decryption gateway callback (`callbackRevealWinner`) | Complete |
 | Sepolia deployment | Planned |
-| Minimal frontend (Next.js + Zama SDK) | Planned |
+| Minimal frontend shell (Phase 3A — no encrypted bids) | Complete |
+| Encrypted bid submission + gateway reveal (Phase 3B) | Planned |
 | Demo video | Planned |
 
 ---
