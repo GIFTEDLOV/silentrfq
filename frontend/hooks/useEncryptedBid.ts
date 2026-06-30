@@ -1,21 +1,14 @@
 "use client";
 
 import { useState } from "react";
+// type-only imports are erased at runtime — no eager SDK chunk dependency
 import type { FhevmInstance } from "@zama-fhe/relayer-sdk/web";
-import {
-  createInstance,
-  initSDK,
-  SepoliaConfig,
-} from "@zama-fhe/relayer-sdk/web";
 import { bytesToHex } from "viem";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { SILENT_RFQ_ABI } from "@/config/contracts";
 
 type SdkStatus = "idle" | "initializing" | "ready" | "error";
 type EncryptStatus = "idle" | "encrypting" | "done" | "error";
-
-// The network field expects Eip1193Provider from ethers; window.ethereum satisfies that interface.
-type FhevmNetwork = Parameters<typeof createInstance>[0]["network"];
 
 export function useEncryptedBid() {
   const [sdkStatus, setSdkStatus] = useState<SdkStatus>("idle");
@@ -34,10 +27,10 @@ export function useEncryptedBid() {
     reset,
   } = useWriteContract();
 
+  // Guard: TanStack Query v5 reports isPending:true on first render with no data.
+  // Disable until a real tx hash exists to prevent phantom "Confirming..." state.
   const { isPending: _isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
-    // Without enabled guard, TanStack Query v5 reports isPending:true from first
-    // render (no data yet = pending state), causing phantom "Confirming..." UI.
     query: { enabled: !!hash },
   });
   const isConfirming = !!hash && _isConfirming;
@@ -49,14 +42,15 @@ export function useEncryptedBid() {
     try {
       const win = window as Window & { ethereum?: unknown };
       if (!win.ethereum) throw new Error("No wallet detected. Install MetaMask.");
-
+      // Lazy import prevents eager WASM evaluation when the chunk first loads.
+      const { initSDK, createInstance, SepoliaConfig } = await import(
+        "@zama-fhe/relayer-sdk/web"
+      );
       await initSDK();
-
       const instance = await createInstance({
         ...SepoliaConfig,
-        network: win.ethereum as unknown as FhevmNetwork,
+        network: win.ethereum as Parameters<typeof createInstance>[0]["network"],
       });
-
       setFhevmInstance(instance);
       setSdkStatus("ready");
     } catch (e) {

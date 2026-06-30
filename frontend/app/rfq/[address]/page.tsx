@@ -9,6 +9,8 @@ import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
 import { EXPECTED_CHAIN_ID } from "@/config/contracts";
 import { useFinalize, useRFQ, useWinnerAddress } from "@/hooks/useRFQ";
+import { BidSection } from "./BidSection";
+import { RevealSection } from "./RevealSection";
 
 function formatDate(unixSeconds: bigint): string {
   return new Date(Number(unixSeconds) * 1000).toLocaleString();
@@ -81,7 +83,8 @@ export default function RFQDetailPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* ── RFQ info table ─────────────────────────────────────────────── */}
       <div>
         <h1 className="text-xl font-bold break-all">RFQ Detail</h1>
         <p className="mt-1 font-mono text-xs text-gray-500 break-all">
@@ -130,7 +133,7 @@ export default function RFQDetailPage() {
               )}
             </td>
           </tr>
-          <tr className="border-b border-gray-100">
+          <tr className={winnerRevealed ? "border-b border-gray-100" : ""}>
             <td className="py-2 px-3 text-gray-500">Vendors</td>
             <td className="py-2 px-3">
               {vendorCount?.toString() ?? "—"}
@@ -140,32 +143,37 @@ export default function RFQDetailPage() {
             <tr>
               <td className="py-2 px-3 text-gray-500">Winner</td>
               <td className="py-2 px-3">
-                <AddressCopy address={winnerAddr} />
+                <AddressCopy address={winnerAddr as `0x${string}`} />
               </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {hasNoBids && (
-        <p className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-          This RFQ has no bids yet. Encrypted bidding will be added in Phase 3B.
-        </p>
+      {/* ── Winner revealed state ───────────────────────────────────────── */}
+      {winnerRevealed && winnerAddr && (
+        <div className="rounded border border-green-300 bg-green-50 p-4 space-y-1">
+          <p className="text-sm font-semibold text-green-800">
+            Winner revealed
+          </p>
+          <AddressCopy address={winnerAddr as `0x${string}`} />
+          <p className="text-xs text-green-700 mt-1">
+            Only the winning vendor address is revealed. Losing bid amounts
+            remain private.
+          </p>
+        </div>
       )}
 
-      {finalized && !winnerRevealed && (
-        <p className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-          RFQ finalized.{" "}
-          <a
-            href={`/debug/reveal?address=${rfqAddress}`}
-            className="underline hover:text-blue-900"
-          >
-            Reveal the winner at /debug/reveal
-          </a>{" "}
-          (Sepolia only).
-        </p>
+      {/* ── Vendor bid section (open RFQ, deadline not passed) ─────────── */}
+      {!finalized && !pastDeadline && (
+        <BidSection
+          rfqAddress={rfqAddress}
+          buyerAddress={buyer}
+          onSuccess={refetch}
+        />
       )}
 
+      {/* ── Buyer finalize section ──────────────────────────────────────── */}
       {!finalized && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-gray-700">Finalize RFQ</h2>
@@ -222,6 +230,11 @@ export default function RFQDetailPage() {
             hash={hash}
           />
         </div>
+      )}
+
+      {/* ── Reveal section (finalized, winner not yet revealed) ─────────── */}
+      {finalized && !winnerRevealed && (
+        <RevealSection rfqAddress={rfqAddress} onSuccess={refetch} />
       )}
     </div>
   );

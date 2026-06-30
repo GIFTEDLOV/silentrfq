@@ -1,19 +1,22 @@
 "use client";
 
 import { useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
-import { SILENT_RFQ_ABI } from "@/config/contracts";
+import { EXPECTED_CHAIN_ID, SILENT_RFQ_ABI } from "@/config/contracts";
 
 export function useRFQ(address: `0x${string}`) {
   const contract = { address, abi: SILENT_RFQ_ABI } as const;
 
+  // Explicit chainId prevents wagmi from defaulting to the first chain in the
+  // config (hardhat) when the wallet is not yet connected. Without it, reads
+  // fail at the localhost:8545 transport when no local node is running.
   const result = useReadContracts({
     contracts: [
-      { ...contract, functionName: "buyer" },
-      { ...contract, functionName: "description" },
-      { ...contract, functionName: "deadline" },
-      { ...contract, functionName: "finalized" },
-      { ...contract, functionName: "winnerRevealed" },
-      { ...contract, functionName: "vendorCount" },
+      { ...contract, functionName: "buyer",          chainId: EXPECTED_CHAIN_ID },
+      { ...contract, functionName: "description",    chainId: EXPECTED_CHAIN_ID },
+      { ...contract, functionName: "deadline",       chainId: EXPECTED_CHAIN_ID },
+      { ...contract, functionName: "finalized",      chainId: EXPECTED_CHAIN_ID },
+      { ...contract, functionName: "winnerRevealed", chainId: EXPECTED_CHAIN_ID },
+      { ...contract, functionName: "vendorCount",    chainId: EXPECTED_CHAIN_ID },
     ],
   });
 
@@ -40,6 +43,7 @@ export function useWinnerAddress(
     address,
     abi: SILENT_RFQ_ABI,
     functionName: "winnerAddress",
+    chainId: EXPECTED_CHAIN_ID,
     query: { enabled },
   });
 }
