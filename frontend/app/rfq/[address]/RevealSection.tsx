@@ -5,10 +5,8 @@ import { decodeAbiParameters } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
-import { SILENT_RFQ_ABI } from "@/config/contracts";
+import { EXPECTED_CHAIN_ID, SILENT_RFQ_ABI } from "@/config/contracts";
 import { useGatewayReveal } from "@/hooks/useGatewayReveal";
-
-const SEPOLIA_CHAIN_ID = 11155111;
 const BYTES32_ZERO =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -45,7 +43,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
     writeError,
   } = useGatewayReveal();
 
-  const isOnSepolia = chainId === SEPOLIA_CHAIN_ID;
+  const isOnExpectedChain = chainId === EXPECTED_CHAIN_ID;
 
   // Read the encrypted best vendor index handle
   const { data: handle } = useReadContract({
@@ -76,14 +74,14 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
 
   const canDecrypt =
     isConnected &&
-    isOnSepolia &&
+    isOnExpectedChain &&
     sdkStatus === "ready" &&
     !isHandleZero &&
     decryptStatus !== "decrypting";
 
   const canSubmit =
     isConnected &&
-    isOnSepolia &&
+    isOnExpectedChain &&
     decryptResult !== null &&
     handle &&
     !isHandleZero &&
@@ -99,7 +97,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
       </p>
 
       {/* Sepolia gate */}
-      {!isOnSepolia && (
+      {!isOnExpectedChain && (
         <p className="rounded border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
           Gateway reveal requires Sepolia. Switch your wallet network to proceed.
         </p>
@@ -108,7 +106,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
       {/* Wallet connect */}
       {!isConnected && <WalletConnect />}
 
-      {isConnected && isOnSepolia && (
+      {isConnected && isOnExpectedChain && (
         <div className="space-y-4">
           {/* SDK init */}
           <div className="flex items-center gap-3">
@@ -190,7 +188,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
                     <strong>Handle not ready for decryption yet.</strong>
                     <br />
                     The Zama relayer may still be indexing the{" "}
-                    <code>finalize()</code> transaction. Wait 30–60 seconds,
+                    <code>finalize()</code> transaction. Wait 30-60 seconds,
                     click Reset, then try again.
                   </>
                 ) : (

@@ -14,13 +14,13 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
   if (isConnected && chainId !== EXPECTED_CHAIN_ID) {
     return (
-      <>
-        <div className="mb-4 rounded border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-800">
+      <div className="rounded border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-800 space-y-1">
+        <p>
           Wrong network. Please switch your wallet to{" "}
           <strong>{chainName(EXPECTED_CHAIN_ID)}</strong>.
-        </div>
-        {children}
-      </>
+        </p>
+        <p>Switch to the configured network before submitting transactions.</p>
+      </div>
     );
   }
 

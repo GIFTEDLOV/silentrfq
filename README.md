@@ -231,9 +231,9 @@ npm run test
 
 ---
 
-## Frontend Development (Phase 3A)
+## Frontend
 
-The frontend is a minimal Next.js app in the `frontend/` directory. It reads RFQ state and lets buyers create and finalize RFQs. Encrypted bid submission is Phase 3B.
+The frontend is a Next.js app in the `frontend/` directory. It supports the full Sepolia flow: wallet connect, RFQ creation, encrypted bid submission via the Zama SDK, buyer finalization, and gateway reveal of the winner address.
 
 ### Setup
 
@@ -272,10 +272,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Route | Description |
 |---|---|
-| `/` | Home — wallet connect, links to create/browse |
+| `/` | Home - wallet connect, links to create/browse |
 | `/create` | Create a new RFQ (description + deadline) |
 | `/rfqs` | List all RFQs from the factory |
-| `/rfq/[address]` | RFQ detail — state, finalize button |
+| `/rfq/[address]` | RFQ detail - encrypted bid submit, finalize, gateway reveal |
+| `/debug/bid` | Debug page for encrypted bid submission |
+| `/debug/reveal` | Debug page for gateway reveal |
 
 ### Build
 
@@ -295,9 +297,10 @@ npm run build
 | TypeScript test suite | Complete |
 | Local FHEVM mock testing | Complete |
 | Zama public decryption gateway callback (`callbackRevealWinner`) | Complete |
-| Sepolia deployment | Planned |
-| Minimal frontend shell (Phase 3A — no encrypted bids) | Complete |
-| Encrypted bid submission + gateway reveal (Phase 3B) | Planned |
+| Sepolia deployment | Complete (tested) |
+| Minimal frontend shell (Phase 3A - no encrypted bids) | Complete |
+| Encrypted bid submission frontend | Complete (tested on Sepolia) |
+| Gateway reveal frontend | Complete (tested on Sepolia) |
 | Demo video | Planned |
 
 ---

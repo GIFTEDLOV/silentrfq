@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
+import { EXPECTED_CHAIN_ID } from "@/config/contracts";
 import { useEncryptedBid } from "@/hooks/useEncryptedBid";
 
-const SEPOLIA_CHAIN_ID = 11155111;
 const UINT64_MAX = BigInt("18446744073709551615");
 
 function isValidUint64(value: string): boolean {
@@ -44,7 +44,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
     reset,
   } = useEncryptedBid();
 
-  const isOnSepolia = chainId === SEPOLIA_CHAIN_ID;
+  const isOnExpectedChain = chainId === EXPECTED_CHAIN_ID;
   const isBuyer =
     isConnected &&
     buyerAddress !== undefined &&
@@ -56,11 +56,11 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
 
   const validate = (): string => {
     if (!isConnected) return "Connect your wallet to submit a bid.";
-    if (!isOnSepolia) return "Switch to Sepolia to use encrypted bidding.";
+    if (!isOnExpectedChain) return "Switch to Sepolia to use encrypted bidding.";
     if (isBuyer) return "The buyer cannot submit a bid on their own RFQ.";
     if (!bidInput.trim()) return "Bid amount is required.";
     if (!isValidUint64(bidInput))
-      return "Bid must be a positive integer ≤ 18446744073709551615 (uint64 max).";
+      return "Bid must be a positive integer <= 18446744073709551615 (uint64 max).";
     return "";
   };
 
@@ -85,14 +85,14 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
       <h2 className="text-sm font-semibold text-gray-800">Submit Encrypted Bid</h2>
 
       {/* Sepolia gate */}
-      {!isOnSepolia && (
+      {!isOnExpectedChain && (
         <p className="rounded border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
           Encrypted bidding requires Sepolia. Switch your wallet network to bid.
         </p>
       )}
 
       {/* Buyer gate */}
-      {isOnSepolia && isBuyer && (
+      {isOnExpectedChain && isBuyer && (
         <p className="text-xs text-gray-500">
           You created this RFQ. Only vendors can submit bids.
         </p>
@@ -102,7 +102,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
       {!isConnected && <WalletConnect />}
 
       {/* Form — shown when connected, Sepolia, not buyer */}
-      {isConnected && isOnSepolia && !isBuyer && (
+      {isConnected && isOnExpectedChain && !isBuyer && (
         <div className="space-y-3">
           {/* SDK init */}
           <div className="flex items-center gap-3">
@@ -158,8 +158,10 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
               />
               <p className="mt-0.5 text-xs text-gray-400">
-                Positive integer, max 18446744073709551615. Encrypted before
-                submission — only you know your bid amount.
+                Positive integer, max 18446744073709551615. Bid amounts are
+                encrypted onchain. Losing bid amounts remain private; the
+                winning bid may be accessible to the buyer after finalization
+                depending on contract permissions.
               </p>
             </div>
 

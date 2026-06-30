@@ -2,6 +2,7 @@
 
 import { useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import {
+  EXPECTED_CHAIN_ID,
   FACTORY_ADDRESS,
   SILENT_RFQ_FACTORY_ABI,
 } from "@/config/contracts";
@@ -11,6 +12,7 @@ export function useGetRFQs() {
     address: FACTORY_ADDRESS!,
     abi: SILENT_RFQ_FACTORY_ABI,
     functionName: "getRFQs",
+    chainId: EXPECTED_CHAIN_ID,
     query: { enabled: !!FACTORY_ADDRESS },
   });
 }

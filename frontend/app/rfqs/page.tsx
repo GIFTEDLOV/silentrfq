@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { NetworkGuard } from "@/components/NetworkGuard";
 import { RFQCard } from "@/components/RFQCard";
 import { FACTORY_ADDRESS, FACTORY_MISSING_MESSAGE } from "@/config/contracts";
 import { useGetRFQs } from "@/hooks/useFactory";
@@ -10,8 +9,7 @@ export default function RFQsPage() {
   const { data: rfqAddresses, isLoading, isError } = useGetRFQs();
 
   return (
-    <NetworkGuard>
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">All RFQs</h1>
           <Link
@@ -55,6 +53,5 @@ export default function RFQsPage() {
           </div>
         )}
       </div>
-    </NetworkGuard>
   );
 }
