@@ -140,18 +140,43 @@ bytes[trailing]    = extraData (0x00 for v0)
 
 ---
 
+## Architecture
+
+SilentRFQ uses a factory pattern: buyers interact with `SilentRFQFactory` to create RFQs, and each RFQ lives in its own `SilentRFQ` contract.
+
+```
+Buyer
+  │
+  └─▶ SilentRFQFactory.createRFQ(description, deadline)
+            │
+            ├─▶ deploys new SilentRFQ(buyer, description, deadline)
+            ├─▶ indexes address in _allRFQs and _rfqsByBuyer[buyer]
+            └─▶ emits RFQCreated(rfq, buyer, description, deadline)
+
+Frontend discovery
+  └─▶ factory.getRFQs()             — all RFQs ever created
+  └─▶ factory.getRFQsByBuyer(addr)  — buyer's own RFQs
+  └─▶ factory.rfqCount()            — total count
+```
+
+Each `SilentRFQ` contract is independent and self-contained. The factory is stateless with respect to bidding — it only tracks addresses.
+
+---
+
 ## Project Structure
 
 ```
 silentrfq/
 ├── contracts/
-│   ├── SilentRFQ.sol       # Main contract — confidential RFQ bidding
-│   └── FHECounter.sol      # Zama template example (unchanged)
+│   ├── SilentRFQFactory.sol # App entry point — deploys and indexes SilentRFQ contracts
+│   ├── SilentRFQ.sol        # Per-RFQ contract — confidential FHE bidding logic
+│   └── FHECounter.sol       # Zama template example (unchanged)
 ├── test/
-│   ├── SilentRFQ.ts        # SilentRFQ test suite (28 tests)
-│   └── FHECounter.ts       # Template example tests (unchanged)
+│   ├── SilentRFQFactory.ts  # Factory test suite (11 tests)
+│   ├── SilentRFQ.ts         # SilentRFQ test suite (29 tests)
+│   └── FHECounter.ts        # Template example tests (unchanged)
 ├── deploy/
-│   └── deploy.ts           # Template deploy script
+│   └── deploy.ts            # Template deploy script
 ├── hardhat.config.ts
 └── package.json
 ```
@@ -188,28 +213,21 @@ npm run test
 ## Test Status
 
 ```
-31 passing
+42 passing
  1 pending  ← Sepolia-only template test, correctly skipped on local
 ```
 
-All 28 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
+**SilentRFQ (29 tests):**
+- Deployment: zero-buyer rejection (`InvalidBuyer`), past/equal-to-now deadline rejection (`InvalidDeadline`), correct initial state
+- submitBid: deadline enforcement, duplicate prevention, first-bid path, FHE comparison correctness (lower/higher/equal), three-vendor selection, vendor ordering
+- finalize: non-buyer, pre-deadline, no-bids, success, exact-boundary, double-finalize
+- callbackRevealWinner: not-finalized, already-revealed, empty handles, length > 1, wrong handle, tampered proof, tampered cleartexts, valid proof success, permissionless caller, full three-vendor gateway flow
 
-- Deployment initial state (including `winnerRevealed = false`)
-- Constructor rejection for past or equal-to-now deadline (`InvalidDeadline`)
-- Bid rejection after deadline and at exact deadline boundary
-- Duplicate bid prevention
-- First-bid direct encrypted store path
-- Lower bid displacing current best (FHE.lt + FHE.select correctness)
-- Higher bid not displacing current best
-- Equal bids keeping the earliest submitted vendor (tie policy)
-- Three-vendor scenario with middle vendor winning
-- Vendor registration order
-- Finalize: non-buyer rejection, pre-deadline rejection, no-bids rejection, success, exact-deadline-boundary success, double-finalize rejection
-- `callbackRevealWinner`: rejects if not finalized, rejects if already revealed, rejects empty handles list, rejects handles list with length > 1, rejects wrong handle, rejects tampered proof (zeroed signature), rejects tampered cleartext with valid proof structure, succeeds with valid KMS proof, callable by anyone (not just buyer)
-- `winnerAddress()` reverts with `WinnerNotRevealed` before reveal
-- `winnerRevealed` transitions from false to true after successful callback
-- Second callback call rejected with `WinnerAlreadyRevealed`
-- Full end-to-end gateway path: Alice=100, Bob=50, Carol=200 → Bob wins → `callbackRevealWinner` with KMS proof → winner confirmed → winning bid decrypted by buyer only
+**SilentRFQFactory (11 tests):**
+- createRFQ: buyer set correctly, address returned, RFQCreated event, invalid deadline propagation
+- getRFQs: all RFQs across buyers, empty before first create
+- getRFQsByBuyer: buyer-scoped results, empty for buyer with no RFQs
+- rfqCount: zero initial, increments correctly
 
 ---
 
@@ -218,6 +236,7 @@ All 28 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment
 | Phase | Status |
 |---|---|
 | Contract proof (`SilentRFQ.sol`) | Complete |
+| Factory contract (`SilentRFQFactory.sol`) | Complete |
 | TypeScript test suite | Complete |
 | Local FHEVM mock testing | Complete |
 | Zama public decryption gateway callback (`callbackRevealWinner`) | Complete |

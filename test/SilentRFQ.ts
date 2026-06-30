@@ -13,10 +13,10 @@ type Signers = {
   carol: HardhatEthersSigner;
 };
 
-async function deployFixture() {
+async function deployFixture(buyerAddress: string) {
   const deadline = (await time.latest()) + 3600; // 1 hour from current block time
   const factory = (await ethers.getContractFactory("SilentRFQ")) as SilentRFQ__factory;
-  const contract = (await factory.deploy("Test RFQ", deadline)) as SilentRFQ;
+  const contract = (await factory.deploy(buyerAddress, "Test RFQ", deadline)) as SilentRFQ;
   const contractAddress = await contract.getAddress();
   return { contract, contractAddress, deadline };
 }
@@ -42,7 +42,7 @@ describe("SilentRFQ", function () {
       console.warn("This test suite cannot run on Sepolia Testnet");
       this.skip();
     }
-    ({ contract, contractAddress, deadline } = await deployFixture());
+    ({ contract, contractAddress, deadline } = await deployFixture(signers.buyer.address));
   });
 
   // Helper: encrypt and submit a bid as a given vendor
@@ -112,13 +112,20 @@ describe("SilentRFQ", function () {
       expect(await contract.getBestVendorIndex()).to.eq(ethers.ZeroHash);
     });
 
+    it("rejects deployment with zero buyer address", async function () {
+      const factory = await ethers.getContractFactory("SilentRFQ");
+      const deadline = (await time.latest()) + 3600;
+      await expect(
+        factory.deploy(ethers.ZeroAddress, "Test RFQ", deadline),
+      ).to.be.revertedWithCustomError(contract, "InvalidBuyer");
+    });
+
     it("rejects deployment with deadline in the past", async function () {
       const factory = await ethers.getContractFactory("SilentRFQ");
       // timestamp 1 is clearly in the past; constructor must revert
-      await expect(factory.deploy("Test RFQ", 1)).to.be.revertedWithCustomError(
-        contract,
-        "InvalidDeadline",
-      );
+      await expect(
+        factory.deploy(signers.buyer.address, "Test RFQ", 1),
+      ).to.be.revertedWithCustomError(contract, "InvalidDeadline");
     });
 
     it("rejects deployment with deadline equal to current block timestamp", async function () {
@@ -127,10 +134,9 @@ describe("SilentRFQ", function () {
       // The deploy tx mines a new block at timestamp >= latest + 1,
       // so a deadline equal to latest is already <= block.timestamp when constructor runs.
       const currentTs = await time.latest();
-      await expect(factory.deploy("Test RFQ", currentTs)).to.be.revertedWithCustomError(
-        contract,
-        "InvalidDeadline",
-      );
+      await expect(
+        factory.deploy(signers.buyer.address, "Test RFQ", currentTs),
+      ).to.be.revertedWithCustomError(contract, "InvalidDeadline");
     });
   });
 

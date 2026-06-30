@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// Phase 1: One RFQ per contract, deployed directly.
-// Production: Use a SilentRFQFactory that deploys one SilentRFQ per request,
-// or a multi-RFQ manager contract mapping rfqId => RFQ state.
-
 import {FHE, euint64, externalEuint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /// @title SilentRFQ — Confidential procurement bidding on Zama FHEVM
-/// @notice Buyers create RFQs; vendors submit encrypted bids; the contract selects
-///         the best bid homomorphically. Losing bid amounts are never revealed.
+/// @notice Deployed by SilentRFQFactory. Buyers create RFQs; vendors submit encrypted
+///         bids; the contract selects the best bid homomorphically. Losing bid amounts
+///         are never revealed.
 contract SilentRFQ is ZamaEthereumConfig {
     address public buyer;
     string public description;
@@ -35,6 +32,7 @@ contract SilentRFQ is ZamaEthereumConfig {
     event WinnerRevealed(uint256 winnerIndex, address winner);
 
     error NotBuyer();
+    error InvalidBuyer();
     error InvalidDeadline();
     error DeadlinePassed();
     error DeadlineNotPassed();
@@ -48,12 +46,13 @@ contract SilentRFQ is ZamaEthereumConfig {
     error TooManyVendors();
     error InvalidDecryptionHandles();
 
-    constructor(string memory _description, uint256 _deadline) {
-        if (_deadline <= block.timestamp) revert InvalidDeadline();
-        buyer = msg.sender;
-        description = _description;
-        deadline = _deadline;
-        emit RFQCreated(msg.sender, _description, _deadline);
+    constructor(address buyer_, string memory description_, uint256 deadline_) {
+        if (buyer_ == address(0)) revert InvalidBuyer();
+        if (deadline_ <= block.timestamp) revert InvalidDeadline();
+        buyer = buyer_;
+        description = description_;
+        deadline = deadline_;
+        emit RFQCreated(buyer_, description_, deadline_);
     }
 
     /// @notice Submit an encrypted bid. The bid amount is never stored or compared in plaintext.
