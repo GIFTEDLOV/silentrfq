@@ -285,63 +285,6 @@ describe("SilentRFQ", function () {
     });
   });
 
-  // ─── revealWinnerFromDecryptedIndex ────────────────────────────────────────
-
-  describe("revealWinnerFromDecryptedIndex", function () {
-    it("rejects reveal before finalize", async function () {
-      await submitBid(signers.alice, 100);
-      await expect(
-        contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0),
-      ).to.be.revertedWithCustomError(contract, "NotFinalized");
-    });
-
-    it("rejects reveal from non-buyer", async function () {
-      await submitBid(signers.alice, 100);
-      await finalizeRFQ();
-      await expect(
-        contract.connect(signers.alice).revealWinnerFromDecryptedIndex(0),
-      ).to.be.revertedWithCustomError(contract, "NotBuyer");
-    });
-
-    it("rejects invalid winner index", async function () {
-      await submitBid(signers.alice, 100);
-      await finalizeRFQ();
-      await expect(
-        contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(1),
-      ).to.be.revertedWithCustomError(contract, "InvalidWinnerIndex");
-    });
-
-    it("winnerAddress reverts with WinnerNotRevealed before reveal", async function () {
-      await submitBid(signers.alice, 100);
-      await finalizeRFQ();
-      // finalized = true but winnerRevealed is still false
-      await expect(contract.winnerAddress()).to.be.revertedWithCustomError(
-        contract,
-        "WinnerNotRevealed",
-      );
-    });
-
-    it("sets winnerRevealed = true after successful reveal", async function () {
-      await submitBid(signers.alice, 100);
-      await finalizeRFQ();
-      expect(await contract.winnerRevealed()).to.eq(false);
-      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0)).wait();
-      expect(await contract.winnerRevealed()).to.eq(true);
-    });
-
-    it("rejects second reveal call after winner is already set", async function () {
-      await submitBid(signers.alice, 100);
-      await submitBid(signers.bob, 50);
-      await finalizeRFQ();
-      // First reveal succeeds
-      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(1)).wait();
-      // Second reveal must revert — winner cannot be changed once set
-      await expect(
-        contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0),
-      ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
-    });
-  });
-
   // ─── callbackRevealWinner ──────────────────────────────────────────────────
 
   describe("callbackRevealWinner (gateway path)", function () {
@@ -370,18 +313,6 @@ describe("SilentRFQ", function () {
       ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
     });
 
-    it("rejects if winner already revealed via revealWinnerFromDecryptedIndex", async function () {
-      await submitBid(signers.alice, 100);
-      await finalizeRFQ();
-      // Reveal via the local/mock path first
-      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0)).wait();
-      // Then try the gateway callback — must also reject
-      const args = await getCallbackArgs();
-      await expect(
-        contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, args.decryptionProof),
-      ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
-    });
-
     it("rejects if handlesList is empty", async function () {
       await submitBid(signers.alice, 100);
       await finalizeRFQ();
@@ -401,6 +332,17 @@ describe("SilentRFQ", function () {
       ).to.be.revertedWithCustomError(contract, "InvalidDecryptionHandles");
     });
 
+    it("rejects if handlesList.length > 1", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      // Two entries — even if the first is correct, the contract requires exactly one handle
+      const twoHandles = [args.handlesList[0], args.handlesList[0]];
+      await expect(
+        contract.callbackRevealWinner(twoHandles, args.abiEncodedCleartexts, args.decryptionProof),
+      ).to.be.revertedWithCustomError(contract, "InvalidDecryptionHandles");
+    });
+
     it("rejects tampered decryptionProof (zeroed signatures)", async function () {
       await submitBid(signers.alice, 100);
       await finalizeRFQ();
@@ -415,6 +357,19 @@ describe("SilentRFQ", function () {
       await expect(
         contract.callbackRevealWinner(args.handlesList, args.abiEncodedCleartexts, fakeProof),
       ).to.be.reverted; // KMSInvalidSigner from FHE library internals
+    });
+
+    it("rejects tampered abiEncodedCleartexts with valid proof structure", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      const args = await getCallbackArgs();
+      // Replace the real decrypted index with a different value. The KMS signature covers
+      // the original (handlesList, abiEncodedCleartexts) tuple, so swapping the cleartexts
+      // invalidates the signature even though the proof bytes are structurally intact.
+      const tamperedCleartexts = ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [999n]);
+      await expect(
+        contract.callbackRevealWinner(args.handlesList, tamperedCleartexts, args.decryptionProof),
+      ).to.be.reverted; // KMSInvalidSigner — signature does not cover tampered cleartexts
     });
 
     it("succeeds with valid proof, stores correct winner index and winner address", async function () {
@@ -478,44 +433,4 @@ describe("SilentRFQ", function () {
     });
   });
 
-  // ─── Full flow ─────────────────────────────────────────────────────────────
-
-  describe("Full flow", function () {
-    it("Alice=100 Bob=50 Carol=200: Bob wins, losing amounts stay private", async function () {
-      await submitBid(signers.alice, 100);
-      await submitBid(signers.bob, 50);
-      await submitBid(signers.carol, 200);
-
-      expect(await contract.vendorCount()).to.eq(3n);
-
-      // Advance past deadline and finalize — this grants buyer decrypt access
-      await finalizeRFQ();
-      expect(await contract.finalized()).to.eq(true);
-
-      // Buyer decrypts the winning vendor index off-chain (FHE.allow granted in finalize)
-      const winnerIndex = await decryptBestVendorIndex();
-      expect(winnerIndex).to.eq(1n); // Bob submitted at index 1
-
-      // winnerAddress() must revert before the buyer calls reveal
-      await expect(contract.winnerAddress()).to.be.revertedWithCustomError(
-        contract,
-        "WinnerNotRevealed",
-      );
-
-      // MVP mock-only: buyer submits the decrypted index to reveal winner on-chain
-      // (In production Sepolia version, this step will be replaced by the Zama gateway callback)
-      const tx = await contract
-        .connect(signers.buyer)
-        .revealWinnerFromDecryptedIndex(Number(winnerIndex));
-      await tx.wait();
-
-      expect(await contract.winnerRevealed()).to.eq(true);
-      expect(await contract.revealedWinnerIndex()).to.eq(1n);
-      expect(await contract.winnerAddress()).to.eq(signers.bob.address);
-
-      // Buyer can verify the winning bid amount; Alice's and Carol's amounts remain private
-      const winningBid = await decryptBestBid();
-      expect(winningBid).to.eq(50n);
-    });
-  });
 });

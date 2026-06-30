@@ -32,7 +32,8 @@ The key properties this enables for SilentRFQ:
 
 - A vendor's submitted bid amount is **never visible** to any other party at any point.
 - The contract can determine which bid is lowest **without knowing what any individual bid is**.
-- Only the buyer, after finalization, can decrypt the winning bid amount and winning vendor index using their wallet key.
+- After finalization, the winning vendor index is **publicly decryptable** via the Zama gateway — anyone can submit a valid KMS-signed proof, but nobody can manually choose the winner. The proof is verified on-chain by `FHE.checkSignatures`.
+- The winning bid amount stays **buyer-private** — only the buyer receives `FHE.allow` access via the Zama SDK.
 - Encrypted ciphertexts and transaction data are public on-chain, but plaintext bid amounts remain private because decrypt permissions (`FHE.allow`) are not granted for losing bids. Without that permission, the ciphertext is unreadable.
 
 This is not obfuscation or off-chain privacy. It is cryptographic privacy enforced by the protocol itself.
@@ -50,7 +51,7 @@ This is not obfuscation or off-chain privacy. It is cryptographic privacy enforc
 | Bid deadline (Unix timestamp) | Contract state |
 | Vendor addresses, in submission order | `vendors[]` array |
 | Number of bids submitted | `vendorCount()` |
-| Final winner address, after reveal | `winnerAddress()` after `callbackRevealWinner` (or mock fallback) |
+| Final winner address, after reveal | `winnerAddress()` after `callbackRevealWinner` |
 | Whether the RFQ has been finalized | `finalized` flag |
 
 ### Private (encrypted, never exposed)
@@ -59,8 +60,8 @@ This is not obfuscation or off-chain privacy. It is cryptographic privacy enforc
 |---|---|
 | Individual bid amounts | Encrypted as `euint64`; only the encrypted handle is stored |
 | Losing bid amounts | No `FHE.allow` is ever granted for losing bids |
-| Encrypted best bid at any point | Stored as private `euint64`; only buyer receives decrypt access after `finalize()` |
-| Which vendor is currently winning during the bidding period | `_bestVendorIndex` is encrypted; not readable until buyer decrypts after deadline |
+| Winning bid amount | `_bestBid` is `euint64`; only the buyer receives `FHE.allow` access after `finalize()` |
+| Which vendor is currently winning during the bidding period | `_bestVendorIndex` is encrypted and unreadable during the bid period |
 | Bid ordering and ranking | The FHE comparison result is itself encrypted; no plaintext ranking is ever produced |
 
 ---
@@ -139,14 +140,6 @@ bytes[trailing]    = extraData (0x00 for v0)
 
 ---
 
-## Local/Mock Fallback: revealWinnerFromDecryptedIndex
-
-`revealWinnerFromDecryptedIndex(uint256 index)` is a **local and mock testing shortcut only**. It accepts the winner index as a buyer-submitted parameter without cryptographic enforcement. It exists so the existing mock test suite can cover winner-reveal flows without running the Zama relayer.
-
-**Do not rely on this function for trustless settlement.** Use `callbackRevealWinner` on Sepolia.
-
----
-
 ## Project Structure
 
 ```
@@ -155,7 +148,7 @@ silentrfq/
 │   ├── SilentRFQ.sol       # Main contract — confidential RFQ bidding
 │   └── FHECounter.sol      # Zama template example (unchanged)
 ├── test/
-│   ├── SilentRFQ.ts        # SilentRFQ test suite (35 tests)
+│   ├── SilentRFQ.ts        # SilentRFQ test suite (28 tests)
 │   └── FHECounter.ts       # Template example tests (unchanged)
 ├── deploy/
 │   └── deploy.ts           # Template deploy script
@@ -195,11 +188,11 @@ npm run test
 ## Test Status
 
 ```
-36 passing
+31 passing
  1 pending  ← Sepolia-only template test, correctly skipped on local
 ```
 
-All 35 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
+All 28 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
 
 - Deployment initial state (including `winnerRevealed = false`)
 - Constructor rejection for past or equal-to-now deadline (`InvalidDeadline`)
@@ -212,13 +205,11 @@ All 35 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment
 - Three-vendor scenario with middle vendor winning
 - Vendor registration order
 - Finalize: non-buyer rejection, pre-deadline rejection, no-bids rejection, success, exact-deadline-boundary success, double-finalize rejection
-- `callbackRevealWinner`: rejects if not finalized, rejects if already revealed, rejects empty handles list, rejects wrong handle, rejects tampered proof, succeeds with valid KMS proof, callable by anyone (not just buyer)
-- `revealWinnerFromDecryptedIndex`: pre-finalize rejection, non-buyer rejection, invalid index rejection
+- `callbackRevealWinner`: rejects if not finalized, rejects if already revealed, rejects empty handles list, rejects handles list with length > 1, rejects wrong handle, rejects tampered proof (zeroed signature), rejects tampered cleartext with valid proof structure, succeeds with valid KMS proof, callable by anyone (not just buyer)
 - `winnerAddress()` reverts with `WinnerNotRevealed` before reveal
-- `winnerRevealed` transitions from false to true on first reveal
-- Second reveal call (both paths) rejected with `WinnerAlreadyRevealed`
-- Full end-to-end happy path (gateway path): Alice=100, Bob=50, Carol=200 → Bob wins → `callbackRevealWinner` with KMS proof → winner confirmed → winning bid decrypted by buyer only
-- Full end-to-end happy path (mock fallback path): same scenario using `revealWinnerFromDecryptedIndex`
+- `winnerRevealed` transitions from false to true after successful callback
+- Second callback call rejected with `WinnerAlreadyRevealed`
+- Full end-to-end gateway path: Alice=100, Bob=50, Carol=200 → Bob wins → `callbackRevealWinner` with KMS proof → winner confirmed → winning bid decrypted by buyer only
 
 ---
 

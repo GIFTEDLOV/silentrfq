@@ -125,20 +125,6 @@ contract SilentRFQ is ZamaEthereumConfig {
         emit RFQFinalized(buyer);
     }
 
-    /// @notice LOCAL/MOCK ONLY — buyer submits the winner index they decrypted off-chain.
-    ///         Does NOT verify on-chain that the index matches the encrypted best vendor.
-    ///         Use callbackRevealWinner for trustless settlement on Sepolia.
-    function revealWinnerFromDecryptedIndex(uint256 index) external {
-        if (msg.sender != buyer) revert NotBuyer();
-        if (!finalized) revert NotFinalized();
-        if (winnerRevealed) revert WinnerAlreadyRevealed();
-        if (index >= vendors.length) revert InvalidWinnerIndex();
-
-        revealedWinnerIndex = index;
-        winnerRevealed = true;
-        emit WinnerRevealed(index, vendors[index]);
-    }
-
     /// @notice Trustless winner reveal via Zama public decryption gateway callback.
     ///         This is the Sepolia-ready settlement path. Anyone can call this function
     ///         with a valid KMS-signed proof — no trust in the caller is required because
@@ -194,8 +180,7 @@ contract SilentRFQ is ZamaEthereumConfig {
         return vendors.length;
     }
 
-    /// @notice Returns the winner address. Reverts until callbackRevealWinner
-    ///         (or revealWinnerFromDecryptedIndex in local mock) has been called.
+    /// @notice Returns the winner address. Reverts until callbackRevealWinner has been called.
     function winnerAddress() external view returns (address) {
         if (!winnerRevealed) revert WinnerNotRevealed();
         return vendors[revealedWinnerIndex];
