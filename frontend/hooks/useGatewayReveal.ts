@@ -1,16 +1,13 @@
 "use client";
 
 import { useState } from "react";
+// type-only imports are erased at runtime — no eager SDK chunk dependency
 import type { FhevmInstance, PublicDecryptResults } from "@zama-fhe/relayer-sdk/web";
-import { createInstance, initSDK, SepoliaConfig } from "@zama-fhe/relayer-sdk/web";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { SILENT_RFQ_ABI } from "@/config/contracts";
 
 export type SdkStatus = "idle" | "initializing" | "ready" | "error";
 export type DecryptStatus = "idle" | "decrypting" | "done" | "error";
-
-// The network field expects Eip1193Provider from ethers; window.ethereum satisfies it.
-type FhevmNetwork = Parameters<typeof createInstance>[0]["network"];
 
 export function useGatewayReveal() {
   const [sdkStatus, setSdkStatus] = useState<SdkStatus>("idle");
@@ -43,10 +40,16 @@ export function useGatewayReveal() {
     try {
       const win = window as Window & { ethereum?: unknown };
       if (!win.ethereum) throw new Error("No wallet detected. Install MetaMask.");
+      // Lazy import prevents eager WASM evaluation when the chunk first loads.
+      // Top-level import of the SDK causes the dynamic chunk to fail silently,
+      // leaving next/dynamic stuck on the loading fallback.
+      const { initSDK, createInstance, SepoliaConfig } = await import(
+        "@zama-fhe/relayer-sdk/web"
+      );
       await initSDK();
       const instance = await createInstance({
         ...SepoliaConfig,
-        network: win.ethereum as unknown as FhevmNetwork,
+        network: win.ethereum as Parameters<typeof createInstance>[0]["network"],
       });
       setFhevmInstance(instance);
       setSdkStatus("ready");
