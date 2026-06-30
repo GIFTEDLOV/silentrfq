@@ -79,10 +79,32 @@ describe("SilentRFQ", function () {
     it("sets initial state correctly", async function () {
       expect(await contract.buyer()).to.eq(signers.buyer.address);
       expect(await contract.finalized()).to.eq(false);
+      expect(await contract.winnerRevealed()).to.eq(false);
       expect(await contract.vendorCount()).to.eq(0n);
       // Uninitialized encrypted handles are bytes32(0)
       expect(await contract.getBestBid()).to.eq(ethers.ZeroHash);
       expect(await contract.getBestVendorIndex()).to.eq(ethers.ZeroHash);
+    });
+
+    it("rejects deployment with deadline in the past", async function () {
+      const factory = await ethers.getContractFactory("SilentRFQ");
+      // timestamp 1 is clearly in the past; constructor must revert
+      await expect(factory.deploy("Test RFQ", 1)).to.be.revertedWithCustomError(
+        contract,
+        "InvalidDeadline",
+      );
+    });
+
+    it("rejects deployment with deadline equal to current block timestamp", async function () {
+      const factory = await ethers.getContractFactory("SilentRFQ");
+      // time.latest() returns the most recent block timestamp.
+      // The deploy tx mines a new block at timestamp >= latest + 1,
+      // so a deadline equal to latest is already <= block.timestamp when constructor runs.
+      const currentTs = await time.latest();
+      await expect(factory.deploy("Test RFQ", currentTs)).to.be.revertedWithCustomError(
+        contract,
+        "InvalidDeadline",
+      );
     });
   });
 
@@ -91,6 +113,18 @@ describe("SilentRFQ", function () {
   describe("submitBid", function () {
     it("rejects bid after deadline", async function () {
       await time.increaseTo(deadline + 1);
+      const enc = await fhevm
+        .createEncryptedInput(contractAddress, signers.alice.address)
+        .add64(100)
+        .encrypt();
+      await expect(
+        contract.connect(signers.alice).submitBid(enc.handles[0], enc.inputProof),
+      ).to.be.revertedWithCustomError(contract, "DeadlinePassed");
+    });
+
+    it("rejects bid at exact deadline boundary", async function () {
+      // block.timestamp == deadline must be rejected: bids are accepted only strictly before deadline
+      await time.setNextBlockTimestamp(deadline);
       const enc = await fhevm
         .createEncryptedInput(contractAddress, signers.alice.address)
         .add64(100)
@@ -126,7 +160,6 @@ describe("SilentRFQ", function () {
       await submitBid(signers.alice, 100);
       await submitBid(signers.bob, 50);
 
-      // Decrypt only after finalize() grants permission
       await finalizeRFQ();
 
       expect(await decryptBestBid()).to.eq(50n);
@@ -141,6 +174,19 @@ describe("SilentRFQ", function () {
 
       expect(await decryptBestBid()).to.eq(50n);
       expect(await decryptBestVendorIndex()).to.eq(0n); // Alice is index 0
+    });
+
+    it("equal bids keep the earliest submitted vendor (tie policy)", async function () {
+      // FHE.lt is strictly less-than: equal bids produce isLower = false.
+      // FHE.select therefore keeps the existing _bestBid and _bestVendorIndex unchanged.
+      // The first vendor to submit an equal bid wins the tie.
+      await submitBid(signers.alice, 100);
+      await submitBid(signers.bob, 100);
+
+      await finalizeRFQ();
+
+      expect(await decryptBestBid()).to.eq(100n);
+      expect(await decryptBestVendorIndex()).to.eq(0n); // Alice submitted first, Alice wins
     });
 
     it("selects best bid among three vendors", async function () {
@@ -195,6 +241,15 @@ describe("SilentRFQ", function () {
       expect(await contract.finalized()).to.eq(true);
     });
 
+    it("succeeds at exact deadline boundary", async function () {
+      // block.timestamp == deadline must allow finalization: bids close at deadline, settlement opens
+      await submitBid(signers.alice, 100);
+      await time.setNextBlockTimestamp(deadline);
+      const tx = await contract.connect(signers.buyer).finalize();
+      await tx.wait();
+      expect(await contract.finalized()).to.eq(true);
+    });
+
     it("rejects double finalize", async function () {
       await submitBid(signers.alice, 100);
       await finalizeRFQ();
@@ -229,6 +284,36 @@ describe("SilentRFQ", function () {
         contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(1),
       ).to.be.revertedWithCustomError(contract, "InvalidWinnerIndex");
     });
+
+    it("winnerAddress reverts with WinnerNotRevealed before reveal", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      // finalized = true but winnerRevealed is still false
+      await expect(contract.winnerAddress()).to.be.revertedWithCustomError(
+        contract,
+        "WinnerNotRevealed",
+      );
+    });
+
+    it("sets winnerRevealed = true after successful reveal", async function () {
+      await submitBid(signers.alice, 100);
+      await finalizeRFQ();
+      expect(await contract.winnerRevealed()).to.eq(false);
+      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0)).wait();
+      expect(await contract.winnerRevealed()).to.eq(true);
+    });
+
+    it("rejects second reveal call after winner is already set", async function () {
+      await submitBid(signers.alice, 100);
+      await submitBid(signers.bob, 50);
+      await finalizeRFQ();
+      // First reveal succeeds
+      await (await contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(1)).wait();
+      // Second reveal must revert — winner cannot be changed once set
+      await expect(
+        contract.connect(signers.buyer).revealWinnerFromDecryptedIndex(0),
+      ).to.be.revertedWithCustomError(contract, "WinnerAlreadyRevealed");
+    });
   });
 
   // ─── Full flow ─────────────────────────────────────────────────────────────
@@ -241,13 +326,19 @@ describe("SilentRFQ", function () {
 
       expect(await contract.vendorCount()).to.eq(3n);
 
-      // Advance past deadline and finalize — this is the step that grants buyer decrypt access
+      // Advance past deadline and finalize — this grants buyer decrypt access
       await finalizeRFQ();
       expect(await contract.finalized()).to.eq(true);
 
-      // Buyer decrypts the winning vendor index off-chain (FHE.allow was granted in finalize)
+      // Buyer decrypts the winning vendor index off-chain (FHE.allow granted in finalize)
       const winnerIndex = await decryptBestVendorIndex();
       expect(winnerIndex).to.eq(1n); // Bob submitted at index 1
+
+      // winnerAddress() must revert before the buyer calls reveal
+      await expect(contract.winnerAddress()).to.be.revertedWithCustomError(
+        contract,
+        "WinnerNotRevealed",
+      );
 
       // MVP mock-only: buyer submits the decrypted index to reveal winner on-chain
       // (In production Sepolia version, this step will be replaced by the Zama gateway callback)
@@ -256,6 +347,7 @@ describe("SilentRFQ", function () {
         .revealWinnerFromDecryptedIndex(Number(winnerIndex));
       await tx.wait();
 
+      expect(await contract.winnerRevealed()).to.eq(true);
       expect(await contract.revealedWinnerIndex()).to.eq(1n);
       expect(await contract.winnerAddress()).to.eq(signers.bob.address);
 

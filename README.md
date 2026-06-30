@@ -33,7 +33,7 @@ The key properties this enables for SilentRFQ:
 - A vendor's submitted bid amount is **never visible** to any other party at any point.
 - The contract can determine which bid is lowest **without knowing what any individual bid is**.
 - Only the buyer, after finalization, can decrypt the winning bid amount and winning vendor index using their wallet key.
-- Losing bid amounts cannot be decrypted by anyone — not by other vendors, not by the buyer, not by a block explorer.
+- Encrypted ciphertexts and transaction data are public on-chain, but plaintext bid amounts remain private because decrypt permissions (`FHE.allow`) are not granted for losing bids. Without that permission, the ciphertext is unreadable.
 
 This is not obfuscation or off-chain privacy. It is cryptographic privacy enforced by the protocol itself.
 
@@ -96,6 +96,8 @@ _bestVendorIndex = FHE.select(isLower, FHE.asEuint64(uint64(newIndex)), _bestVen
 
 `FHE.lt` compares two encrypted values and returns an encrypted boolean — the comparison result itself is never revealed. `FHE.select` acts as an encrypted conditional: it picks the lower bid and the corresponding vendor index using the encrypted boolean, without ever decrypting either candidate.
 
+**Tie policy:** `FHE.lt` is strictly less-than. If two vendors submit equal amounts, `isLower` evaluates to false and `FHE.select` leaves `_bestBid` and `_bestVendorIndex` unchanged. The earliest bid wins any tie.
+
 After every bid, `FHE.allowThis` is called on both `_bestBid` and `_bestVendorIndex` so the contract retains access to the updated ciphertexts across future transactions.
 
 ### 3. Buyer finalizes after the deadline
@@ -106,7 +108,7 @@ After the deadline passes, the buyer calls `finalize()`. This:
 - Sets `finalized = true`.
 - Calls `FHE.allow(_bestBid, buyer)` and `FHE.allow(_bestVendorIndex, buyer)` — granting the buyer (and only the buyer) off-chain decryption access to the winning bid amount and winning vendor index.
 
-No other party is granted decrypt access. Losing bid amounts remain permanently inaccessible.
+No other party is granted decrypt access. Losing bid ciphertexts remain on-chain but their plaintext values are permanently unreadable without an `FHE.allow` grant — which is never issued for losing bids.
 
 ### 4. Buyer reveals the winner
 
@@ -136,7 +138,7 @@ silentrfq/
 │   ├── SilentRFQ.sol       # Main contract — confidential RFQ bidding
 │   └── FHECounter.sol      # Zama template example (unchanged)
 ├── test/
-│   ├── SilentRFQ.ts        # SilentRFQ test suite (19 tests)
+│   ├── SilentRFQ.ts        # SilentRFQ test suite (27 tests)
 │   └── FHECounter.ts       # Template example tests (unchanged)
 ├── deploy/
 │   └── deploy.ts           # Template deploy script
@@ -176,23 +178,28 @@ npm run test
 ## Test Status
 
 ```
-20 passing
+28 passing
  1 pending  ← Sepolia-only template test, correctly skipped on local
 ```
 
-All 19 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
+All 27 SilentRFQ-specific tests pass on the local Hardhat FHEVM mock environment, covering:
 
-- Deployment initial state
-- Bid rejection after deadline
+- Deployment initial state (including `winnerRevealed = false`)
+- Constructor rejection for past or equal-to-now deadline (`InvalidDeadline`)
+- Bid rejection after deadline and at exact deadline boundary
 - Duplicate bid prevention
 - First-bid direct encrypted store path
 - Lower bid displacing current best (FHE.lt + FHE.select correctness)
 - Higher bid not displacing current best
+- Equal bids keeping the earliest submitted vendor (tie policy)
 - Three-vendor scenario with middle vendor winning
 - Vendor registration order
-- Finalize: non-buyer rejection, pre-deadline rejection, no-bids rejection, success, double-finalize rejection
+- Finalize: non-buyer rejection, pre-deadline rejection, no-bids rejection, success, exact-deadline-boundary success, double-finalize rejection
 - Winner reveal: pre-finalize rejection, non-buyer rejection, invalid index rejection
-- Full end-to-end happy path: Alice=100, Bob=50, Carol=200 → Bob wins → winner address confirmed → winning bid decrypted by buyer only
+- `winnerAddress()` reverts with `WinnerNotRevealed` before reveal
+- `winnerRevealed` transitions from false to true on first reveal
+- Second reveal call rejected with `WinnerAlreadyRevealed`
+- Full end-to-end happy path: Alice=100, Bob=50, Carol=200 → Bob wins → `winnerAddress()` guarded until reveal → winner address confirmed → winning bid decrypted by buyer only
 
 ---
 

@@ -16,6 +16,7 @@ contract SilentRFQ is ZamaEthereumConfig {
     string public description;
     uint256 public deadline;
     bool public finalized;
+    bool public winnerRevealed;
     uint256 public revealedWinnerIndex;
 
     // Vendor addresses in submission order. Public so the revealed winner index
@@ -34,6 +35,7 @@ contract SilentRFQ is ZamaEthereumConfig {
     event WinnerRevealed(uint256 winnerIndex, address winner);
 
     error NotBuyer();
+    error InvalidDeadline();
     error DeadlinePassed();
     error DeadlineNotPassed();
     error AlreadyBid();
@@ -41,8 +43,12 @@ contract SilentRFQ is ZamaEthereumConfig {
     error NoBids();
     error NotFinalized();
     error InvalidWinnerIndex();
+    error WinnerNotRevealed();
+    error WinnerAlreadyRevealed();
+    error TooManyVendors();
 
     constructor(string memory _description, uint256 _deadline) {
+        if (_deadline <= block.timestamp) revert InvalidDeadline();
         buyer = msg.sender;
         description = _description;
         deadline = _deadline;
@@ -63,6 +69,12 @@ contract SilentRFQ is ZamaEthereumConfig {
         bool isFirstBid = (vendors.length == 0);
         vendors.push(msg.sender);
         uint256 newIndex = vendors.length - 1;
+
+        // Guard against uint64 overflow before casting the vendor index.
+        // In practice this limit (2^64 - 1 vendors) will never be reached,
+        // but the cast must be safe.
+        if (newIndex > type(uint64).max) revert TooManyVendors();
+
         hasBid[msg.sender] = true;
 
         if (isFirstBid) {
@@ -73,6 +85,10 @@ contract SilentRFQ is ZamaEthereumConfig {
             // Compare new bid against current best homomorphically.
             // FHE.select chooses the lower bid and its vendor index
             // without revealing which candidate won the comparison.
+            //
+            // Tie policy: equal bids keep the earliest submitted bid.
+            // FHE.lt is strictly less-than, so isLower is false for equal
+            // amounts and FHE.select leaves _bestBid and _bestVendorIndex unchanged.
             ebool isLower = FHE.lt(encryptedBid, _bestBid);
             _bestBid = FHE.select(isLower, encryptedBid, _bestBid);
             _bestVendorIndex = FHE.select(isLower, FHE.asEuint64(uint64(newIndex)), _bestVendorIndex);
@@ -96,7 +112,8 @@ contract SilentRFQ is ZamaEthereumConfig {
         finalized = true;
 
         // Grant buyer permission to decrypt the winning index and bid amount off-chain.
-        // No other party receives access; losing bid amounts remain permanently private.
+        // No other party receives access; losing bid ciphertexts remain on-chain but
+        // their plaintext values are permanently inaccessible without an FHE.allow grant.
         FHE.allow(_bestBid, buyer);
         FHE.allow(_bestVendorIndex, buyer);
 
@@ -111,9 +128,11 @@ contract SilentRFQ is ZamaEthereumConfig {
     function revealWinnerFromDecryptedIndex(uint256 index) external {
         if (msg.sender != buyer) revert NotBuyer();
         if (!finalized) revert NotFinalized();
+        if (winnerRevealed) revert WinnerAlreadyRevealed();
         if (index >= vendors.length) revert InvalidWinnerIndex();
 
         revealedWinnerIndex = index;
+        winnerRevealed = true;
         emit WinnerRevealed(index, vendors[index]);
     }
 
@@ -133,9 +152,10 @@ contract SilentRFQ is ZamaEthereumConfig {
         return vendors.length;
     }
 
-    /// @notice Returns the winner address. Only meaningful after finalized == true
-    ///         and revealWinnerFromDecryptedIndex has been called.
+    /// @notice Returns the winner address. Reverts until the buyer has called
+    ///         revealWinnerFromDecryptedIndex after finalization.
     function winnerAddress() external view returns (address) {
+        if (!winnerRevealed) revert WinnerNotRevealed();
         return vendors[revealedWinnerIndex];
     }
 }
