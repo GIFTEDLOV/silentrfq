@@ -12,13 +12,31 @@ import { useCreateRFQ } from "@/hooks/useFactory";
 export default function CreatePage() {
   const [description, setDescription] = useState("");
   const [deadlineInput, setDeadlineInput] = useState("");
+  const [deadlineError, setDeadlineError] = useState("");
   const { isConnected } = useAccount();
   const { create, hash, isPending, isConfirming, isSuccess, error, reset } =
     useCreateRFQ();
 
+  const validateDeadline = (value: string): string => {
+    if (!value) return "";
+    const selected = new Date(value).getTime();
+    if (selected <= Date.now()) return "Deadline must be in the future.";
+    return "";
+  };
+
+  const handleDeadlineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDeadlineInput(e.target.value);
+    setDeadlineError(validateDeadline(e.target.value));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim() || !deadlineInput) return;
+    const err = validateDeadline(deadlineInput);
+    if (err) {
+      setDeadlineError(err);
+      return;
+    }
     const deadlineUnix = BigInt(
       Math.floor(new Date(deadlineInput).getTime() / 1000)
     );
@@ -95,15 +113,24 @@ export default function CreatePage() {
               <input
                 type="datetime-local"
                 value={deadlineInput}
-                onChange={(e) => setDeadlineInput(e.target.value)}
+                onChange={handleDeadlineChange}
                 required
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
+                  deadlineError
+                    ? "border-red-400 focus:ring-red-300"
+                    : "border-gray-300 focus:ring-gray-400"
+                }`}
               />
+              {deadlineError && (
+                <p className="mt-1 text-xs text-red-600">{deadlineError}</p>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={!FACTORY_ADDRESS || isPending || isConfirming}
+              disabled={
+                !FACTORY_ADDRESS || !!deadlineError || isPending || isConfirming
+              }
               className="rounded bg-gray-900 text-white px-4 py-2 text-sm disabled:opacity-40 hover:bg-gray-700"
             >
               {isPending

@@ -44,7 +44,7 @@ export default function RFQDetailPage() {
     error,
   } = useFinalize(rfqAddress);
 
-  const { isConnected, chainId } = useAccount();
+  const { isConnected, chainId, address: connectedAddress } = useAccount();
 
   useEffect(() => {
     if (finalizeSuccess) refetch();
@@ -55,9 +55,14 @@ export default function RFQDetailPage() {
     deadline !== undefined && nowSeconds >= Number(deadline);
   const isWrongNetwork = isConnected && chainId !== EXPECTED_CHAIN_ID;
   const hasNoBids = vendorCount !== undefined && vendorCount === 0n;
+  const isBuyer =
+    isConnected &&
+    buyer !== undefined &&
+    connectedAddress?.toLowerCase() === buyer.toLowerCase();
 
   const canFinalize =
     isConnected &&
+    isBuyer &&
     !isWrongNetwork &&
     finalized === false &&
     pastDeadline &&
@@ -168,7 +173,13 @@ export default function RFQDetailPage() {
             </div>
           )}
 
-          {isConnected && (
+          {isConnected && !isBuyer && buyer !== undefined && (
+            <p className="text-sm text-gray-500">
+              Only the buyer can finalize this RFQ.
+            </p>
+          )}
+
+          {isConnected && isBuyer && (
             <NetworkGuard>
               <div className="space-y-2">
                 {!pastDeadline && deadline !== undefined && (
