@@ -19,7 +19,7 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
   const current = currentStepIndex(pastDeadline, finalized, winnerRevealed);
 
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white px-5 py-5">
+    <div className="w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
       <div className="flex items-start" style={{ minWidth: 460 }}>
         {STEPS.map((label, i) => {
           const isDone = i < current;
@@ -31,21 +31,21 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-bold
                     ${isCurrent
-                      ? "border-gray-900 bg-gray-900 text-white"
+                      ? "border-indigo-600 bg-indigo-600 text-white"
                       : isDone
-                      ? "border-gray-300 bg-gray-100 text-gray-500"
-                      : "border-gray-200 bg-white text-gray-300"
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-600"
+                      : "border-slate-200 bg-white text-slate-300"
                     }`}
                 >
-                  {i + 1}
+                  {isDone ? "✓" : i + 1}
                 </div>
                 <span
                   className={`mt-2 text-center text-xs leading-tight
                     ${isCurrent
-                      ? "font-semibold text-gray-900"
+                      ? "font-semibold text-indigo-700"
                       : isDone
-                      ? "text-gray-500"
-                      : "text-gray-300"
+                      ? "text-slate-500"
+                      : "text-slate-300"
                     }`}
                   style={{ maxWidth: "5rem" }}
                 >
@@ -54,7 +54,7 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
               </div>
               {i < STEPS.length - 1 && (
                 <div
-                  className={`mt-3.5 h-0.5 flex-1 ${i < current ? "bg-gray-400" : "bg-gray-200"}`}
+                  className={`mt-3.5 h-0.5 flex-1 ${i < current ? "bg-emerald-300" : "bg-slate-200"}`}
                 />
               )}
             </Fragment>

@@ -81,19 +81,19 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
   };
 
   return (
-    <div className="space-y-4 rounded border border-gray-200 p-4">
-      <h2 className="text-sm font-semibold text-gray-800">Submit Encrypted Bid</h2>
+    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="text-sm font-semibold text-slate-800">Submit Encrypted Bid</h2>
 
       {/* Sepolia gate */}
       {!isOnExpectedChain && (
-        <p className="rounded border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
+        <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
           Encrypted bidding requires Sepolia. Switch your wallet network to bid.
         </p>
       )}
 
       {/* Buyer gate */}
       {isOnExpectedChain && isBuyer && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-slate-500">
           You created this RFQ. Only vendors can submit bids.
         </p>
       )}
@@ -111,7 +111,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
               disabled={
                 sdkStatus === "ready" || sdkStatus === "initializing"
               }
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-40"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-40 transition-colors"
             >
               {sdkStatus === "initializing"
                 ? "Initializing..."
@@ -120,12 +120,12 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
             <span
               className={`text-xs font-medium ${
                 sdkStatus === "ready"
-                  ? "text-green-700"
+                  ? "text-emerald-700"
                   : sdkStatus === "error"
                   ? "text-red-600"
                   : sdkStatus === "initializing"
-                  ? "text-blue-600"
-                  : "text-gray-400"
+                  ? "text-indigo-600"
+                  : "text-slate-400"
               }`}
             >
               {sdkStatus === "idle" && "SDK not initialized"}
@@ -155,7 +155,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                 value={bidInput}
                 onChange={(e) => setBidInput(e.target.value)}
                 placeholder="e.g. 1000"
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
               />
               <p className="mt-0.5 text-xs text-gray-400">
                 Positive integer, max 18446744073709551615. Bid amounts are
@@ -178,7 +178,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                   isConfirming ||
                   encryptStatus === "encrypting"
                 }
-                className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-40"
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
               >
                 {encryptStatus === "encrypting"
                   ? "Encrypting..."
@@ -193,7 +193,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
                 >
                   Reset
                 </button>
@@ -206,10 +206,10 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
             <p
               className={`text-xs ${
                 encryptStatus === "done"
-                  ? "text-green-700"
+                  ? "text-emerald-700"
                   : encryptStatus === "error"
                   ? "text-red-600"
-                  : "text-blue-600"
+                  : "text-indigo-600"
               }`}
             >
               {encryptStatus === "encrypting" &&
@@ -229,7 +229,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
           />
 
           {isSuccess && (
-            <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
               Bid submitted. Your encrypted bid has been recorded on-chain.
             </p>
           )}

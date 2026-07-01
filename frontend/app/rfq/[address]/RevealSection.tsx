@@ -89,16 +89,16 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
     !isConfirming;
 
   return (
-    <div className="space-y-4 rounded border border-blue-200 bg-blue-50 p-4">
-      <h2 className="text-sm font-semibold text-blue-900">Reveal Winner</h2>
-      <p className="text-xs text-blue-700">
+    <div className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+      <h2 className="text-sm font-semibold text-indigo-900">Reveal Winner</h2>
+      <p className="text-xs text-indigo-700">
         Uses the Zama KMS gateway to publicly decrypt the winning vendor index.
         Requires Sepolia.
       </p>
 
       {/* Sepolia gate */}
       {!isOnExpectedChain && (
-        <p className="rounded border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
+        <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
           Gateway reveal requires Sepolia. Switch your wallet network to proceed.
         </p>
       )}
@@ -115,7 +115,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
               disabled={
                 sdkStatus === "ready" || sdkStatus === "initializing"
               }
-              className="rounded border border-blue-300 bg-white px-3 py-1.5 text-xs hover:bg-blue-50 disabled:opacity-40"
+              className="rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-xs hover:bg-indigo-50 disabled:opacity-40 transition-colors"
             >
               {sdkStatus === "initializing"
                 ? "Initializing..."
@@ -124,12 +124,12 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
             <span
               className={`text-xs font-medium ${
                 sdkStatus === "ready"
-                  ? "text-green-700"
+                  ? "text-emerald-700"
                   : sdkStatus === "error"
                   ? "text-red-600"
                   : sdkStatus === "initializing"
-                  ? "text-blue-600"
-                  : "text-blue-400"
+                  ? "text-indigo-600"
+                  : "text-indigo-400"
               }`}
             >
               {sdkStatus === "idle" && "SDK not initialized"}
@@ -140,7 +140,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
             {sdkStatus === "error" && (
               <button
                 onClick={initSdk}
-                className="text-xs text-blue-600 underline"
+                className="text-xs text-indigo-600 underline"
               >
                 Retry
               </button>
@@ -149,14 +149,14 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
 
           {/* Step 1 — Request decryption */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-blue-800">
+            <p className="text-xs font-medium text-indigo-800">
               Step 1 — Request public decryption from Zama KMS
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handle && requestDecrypt(handle as `0x${string}`)}
                 disabled={!canDecrypt}
-                className="rounded border border-blue-300 bg-white px-3 py-1.5 text-xs hover:bg-blue-50 disabled:opacity-40"
+                className="rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-xs hover:bg-indigo-50 disabled:opacity-40 transition-colors"
               >
                 {decryptStatus === "decrypting"
                   ? "Requesting from KMS..."
@@ -165,7 +165,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
               {decryptStatus !== "idle" && (
                 <button
                   onClick={resetDecrypt}
-                  className="text-xs text-blue-600 underline"
+                  className="text-xs text-indigo-600 underline"
                 >
                   Reset
                 </button>
@@ -174,7 +174,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
 
             {/* Pre-flight hint */}
             {!canDecrypt && sdkStatus === "ready" && (
-              <p className="text-xs text-blue-500">
+              <p className="text-xs text-indigo-500">
                 {isHandleZero && "No bids on this RFQ (handle is zero)."}
                 {decryptStatus === "decrypting" && "Waiting for KMS response..."}
               </p>
@@ -220,10 +220,10 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
 
           {/* Step 2 — Submit on-chain */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-blue-800">
+            <p className="text-xs font-medium text-indigo-800">
               Step 2 — Submit proof on-chain
             </p>
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-indigo-600">
               Permissionless — any wallet can call this. The contract verifies
               the KMS signatures.
             </p>
@@ -238,7 +238,7 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
                 }
               }}
               disabled={!canSubmit}
-              className="rounded bg-blue-800 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-40"
+              className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-40 transition-colors"
             >
               {isPending
                 ? "Waiting for wallet..."

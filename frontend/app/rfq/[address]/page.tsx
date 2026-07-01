@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAccount } from "wagmi";
+import { ChevronLeft, ExternalLink, Share2 } from "lucide-react";
 import { AddressCopy } from "@/components/AddressCopy";
 import { LifecycleTimeline } from "@/components/LifecycleTimeline";
 import { NetworkGuard } from "@/components/NetworkGuard";
@@ -25,8 +26,8 @@ function formatDate(unixSeconds: bigint): string {
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-400">{label}</p>
-      <div className="mt-0.5 text-sm text-gray-900">{value}</div>
+      <p className="text-xs font-medium text-slate-400">{label}</p>
+      <div className="mt-0.5 text-sm text-slate-900">{value}</div>
     </div>
   );
 }
@@ -81,7 +82,8 @@ export default function RFQDetailPage() {
     pastDeadline &&
     !hasNoBids;
 
-  // Derive status badge
+  const isSepoliaChain = chainId === 11155111;
+
   let status: RFQStatus = "open";
   if (winnerRevealed) status = "revealed";
   else if (finalized) status = "finalized";
@@ -90,16 +92,16 @@ export default function RFQDetailPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
-        <div className="h-8 w-64 rounded bg-gray-200 animate-pulse" />
-        <div className="h-32 rounded-lg bg-gray-200 animate-pulse" />
+        <div className="h-4 w-24 rounded bg-slate-200 animate-pulse" />
+        <div className="h-8 w-64 rounded bg-slate-200 animate-pulse" />
+        <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
       </div>
     );
   }
 
   if (isError || buyer === undefined) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-600">
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">
         Failed to load RFQ. Check the address and your wallet network.
       </div>
     );
@@ -108,14 +110,36 @@ export default function RFQDetailPage() {
   return (
     <div className="space-y-6">
       {/* Back link */}
-      <Link href="/rfqs" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-        Back to All RFQs
+      <Link
+        href="/rfqs"
+        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        All RFQs
       </Link>
 
       {/* Page header */}
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">RFQ Detail</h1>
-        <p className="mt-0.5 font-mono text-xs text-gray-400 break-all">{rfqAddress}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">
+            {description ?? "RFQ Detail"}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs text-slate-400 break-all">{rfqAddress}</span>
+            {isSepoliaChain && (
+              <a
+                href={`https://sepolia.etherscan.io/address/${rfqAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                Etherscan
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
+        <StatusBadge status={status} />
       </div>
 
       {/* Lifecycle timeline */}
@@ -128,15 +152,12 @@ export default function RFQDetailPage() {
       {/* Two-column grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
 
-        {/* ── Left column: info + privacy ─────────────────────────────── */}
+        {/* Left column */}
         <div className="space-y-5 lg:col-span-3">
 
           {/* RFQ info card */}
-          <div className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="text-base font-semibold text-gray-900">RFQ Details</h2>
-              <StatusBadge status={status} />
-            </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold text-slate-800">RFQ Details</h2>
             <div className="space-y-4">
               <InfoRow label="Buyer" value={<AddressCopy address={buyer} />} />
               <InfoRow label="Description" value={description ?? "-"} />
@@ -164,12 +185,33 @@ export default function RFQDetailPage() {
 
           {/* Winner card */}
           {winnerRevealed && winnerAddr && (
-            <div className="rounded-lg border border-green-300 bg-green-50 p-5">
-              <p className="text-sm font-semibold text-green-800">Winner Revealed</p>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-bold text-emerald-900">Winner Revealed</p>
+                <button
+                  onClick={() => navigator.clipboard.writeText(window.location.href)}
+                  className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 transition-colors"
+                  title="Copy link to this RFQ"
+                >
+                  <Share2 className="h-3 w-3" />
+                  Share
+                </button>
+              </div>
               <div className="mt-2">
                 <AddressCopy address={winnerAddr as `0x${string}`} />
               </div>
-              <p className="mt-2 text-xs text-green-700">
+              {isSepoliaChain && (
+                <a
+                  href={`https://sepolia.etherscan.io/address/${winnerAddr}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
+                >
+                  View on Etherscan
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              <p className="mt-3 text-xs text-emerald-700">
                 Losing bid amounts remain encrypted and private. Only the winning vendor
                 index was publicly decrypted via the Zama KMS gateway.
               </p>
@@ -180,16 +222,16 @@ export default function RFQDetailPage() {
           <PrivacyPanel />
         </div>
 
-        {/* ── Right column: role + active action ──────────────────────── */}
+        {/* Right column */}
         <div className="space-y-4 lg:col-span-2">
 
           {/* Role indicator */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Your role:</span>
+            <span className="text-xs text-slate-500">Your role:</span>
             <RoleIndicator isConnected={isConnected} isBuyer={isBuyer} />
           </div>
 
-          {/* BIDDING OPEN: show BidSection */}
+          {/* Bidding open */}
           {!finalized && !pastDeadline && (
             <BidSection
               rfqAddress={rfqAddress}
@@ -198,24 +240,24 @@ export default function RFQDetailPage() {
             />
           )}
 
-          {/* DEADLINE PASSED, NOT YET FINALIZED: show finalize panel */}
+          {/* Deadline passed, not yet finalized */}
           {pastDeadline && !finalized && (
-            <div className="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-800">Finalize RFQ</h3>
-              <p className="text-xs text-gray-500">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+              <h3 className="text-sm font-semibold text-slate-800">Finalize RFQ</h3>
+              <p className="text-xs text-slate-500">
                 The deadline has passed. The buyer finalizes to lock in the winning bid
                 and authorize public decryption.
               </p>
 
               {!isConnected && (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Connect your wallet to finalize.</p>
+                  <p className="text-sm text-slate-600">Connect your wallet to finalize.</p>
                   <WalletConnect />
                 </div>
               )}
 
               {isConnected && !isBuyer && buyer !== undefined && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                   Only the buyer can finalize this RFQ.
                 </p>
               )}
@@ -224,14 +266,14 @@ export default function RFQDetailPage() {
                 <NetworkGuard>
                   <div className="space-y-3">
                     {hasNoBids && (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-slate-500">
                         No bids were submitted. Cannot finalize.
                       </p>
                     )}
                     <button
                       onClick={finalize}
                       disabled={!canFinalize || isPending || isConfirming}
-                      className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                      className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
                     >
                       {isPending
                         ? "Waiting for wallet..."
@@ -253,16 +295,16 @@ export default function RFQDetailPage() {
             </div>
           )}
 
-          {/* FINALIZED, WINNER NOT YET REVEALED: show RevealSection */}
+          {/* Finalized, winner not yet revealed */}
           {finalized && !winnerRevealed && (
             <RevealSection rfqAddress={rfqAddress} onSuccess={refetch} />
           )}
 
-          {/* COMPLETE: winner already revealed */}
+          {/* Complete */}
           {winnerRevealed && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-5">
-              <p className="text-sm font-semibold text-green-800">RFQ Complete</p>
-              <p className="mt-1.5 text-xs text-green-700">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+              <p className="text-sm font-bold text-emerald-900">RFQ Complete</p>
+              <p className="mt-1.5 text-xs text-emerald-700">
                 The winner has been publicly revealed via Zama KMS gateway decryption.
                 No further actions are available.
               </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useAccount } from "wagmi";
 import { EXPECTED_CHAIN_ID } from "@/config/contracts";
 
@@ -14,12 +15,16 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
   if (isConnected && chainId !== EXPECTED_CHAIN_ID) {
     return (
-      <div className="rounded border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-800 space-y-1">
-        <p>
-          Wrong network. Please switch your wallet to{" "}
-          <strong>{chainName(EXPECTED_CHAIN_ID)}</strong>.
-        </p>
-        <p>Switch to the configured network before submitting transactions.</p>
+      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <div className="space-y-1">
+          <p className="font-semibold">Wrong network</p>
+          <p>
+            Please switch your wallet to{" "}
+            <strong>{chainName(EXPECTED_CHAIN_ID)}</strong> before submitting
+            transactions.
+          </p>
+        </div>
       </div>
     );
   }
