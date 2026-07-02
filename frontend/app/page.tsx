@@ -1,209 +1,420 @@
 import Link from "next/link";
-import { Building2, CheckCircle, Lock, Shield, Trophy } from "lucide-react";
+import { CheckCircle, Lock, Shield, Trophy, Zap } from "lucide-react";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 const HOW_IT_WORKS = [
   {
-    icon: Building2,
-    step: "1",
+    step: "01",
     title: "Buyer creates RFQ",
-    desc: "Post a request with a description and deadline. The contract address is public; bid logic is private.",
+    desc: "Post a procurement request with a description and deadline. Contract is deployed publicly — bid logic is private.",
   },
   {
-    icon: Lock,
-    step: "2",
-    title: "Vendors submit encrypted bids",
-    desc: "Each vendor encrypts their price locally using the Zama SDK. Only a ciphertext lands on-chain.",
+    step: "02",
+    title: "Vendors encrypt bids",
+    desc: "Each vendor encrypts their price locally using the Zama SDK. Only a TFHE ciphertext lands on-chain. No plaintext, ever.",
   },
   {
-    icon: Trophy,
-    step: "3",
-    title: "Gateway reveals the winner",
-    desc: "After finalization, the Zama KMS decrypts only the winning vendor index. Losing amounts stay private forever.",
+    step: "03",
+    title: "Buyer finalizes",
+    desc: "After the deadline, the buyer calls finalize(). Bids have been compared homomorphically throughout the entire bidding period.",
+  },
+  {
+    step: "04",
+    title: "Gateway reveals winner",
+    desc: "The Zama KMS decrypts only the winning vendor index. Any wallet submits the proof on-chain. Losing amounts stay private forever.",
   },
 ];
 
 const TRUST_ITEMS = [
-  "Zama FHEVM",
-  "Sepolia Testnet",
-  "Solidity Smart Contracts",
-  "KMS Gateway Verified",
-];
-
-const DEMO_STEPS = [
-  "Buyer creates RFQ with a description and deadline.",
-  "Vendors initialize the Zama SDK and submit encrypted bid amounts.",
-  "Buyer calls finalize() after the deadline passes.",
-  "Anyone submits the KMS-signed proof via callbackRevealWinner.",
-  "Winner address is revealed. All other bid amounts remain encrypted permanently.",
-];
-
-const PUBLIC_ITEMS = [
-  "RFQ description and deadline",
-  "Vendor wallet addresses",
-  "Total bid count",
-  "Winner address (after reveal only)",
-];
-
-const PRIVATE_ITEMS = [
-  "Individual bid amounts",
-  "Losing bid amounts (permanently)",
-  "Winning bid amount (buyer-only FHE access)",
-  "Live ranking during bidding",
+  "Sepolia tested",
+  "42 tests passing",
+  "Gateway reveal verified",
+  "Losing bids stay private",
 ];
 
 const FOR_EVALUATORS = [
   {
     title: "TFHE homomorphic comparison",
-    desc: "Bid amounts are encrypted using TFHE. Comparison is done homomorphically - no zero-knowledge proof needed and no trusted intermediary.",
+    desc: "Bid amounts are compared using TFHE operations on encrypted ciphertexts. No zero-knowledge proof needed. No trusted intermediary.",
   },
   {
     title: "Permissionless reveal",
-    desc: "Any wallet can submit the KMS decryption proof on-chain. Winner selection cannot be gamed or withheld.",
+    desc: "Any wallet can submit the KMS decryption proof on-chain. Winner selection cannot be gamed, withheld, or front-run.",
   },
   {
     title: "Verifiable on Sepolia",
-    desc: "All contract logic is open source and independently verifiable. Factory and RFQ addresses are public.",
+    desc: "All contract logic is open source and independently verifiable. Factory and RFQ addresses are public on the testnet.",
   },
 ];
 
+const MOCK_BIDS = [
+  { id: "VENDOR_01", addr: "0x456c...f1dc", cipher: "0x1a4f8e...e839" },
+  { id: "VENDOR_02", addr: "0x3BDC...6798", cipher: "0x8b2c1d...1f40" },
+  { id: "VENDOR_03", addr: "0x9f2e...a011", cipher: "0x3d7ac9...c92e" },
+];
+
+function HeroVisual() {
+  return (
+    <div className="relative">
+      <div
+        className="absolute inset-0 rounded-3xl"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 70% at 50% 50%, rgba(47,107,255,0.12) 0%, rgba(255,210,8,0.05) 70%, transparent 100%)",
+          filter: "blur(24px)",
+          transform: "scale(1.08)",
+        }}
+      />
+      <div className="relative rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+          <div className="flex gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-white/[0.05]" />
+          </div>
+          <p className="ml-2 font-mono text-[10px] text-slate-600 flex-1">
+            silentrfq / fhe-procurement-core
+          </p>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+              style={{ animation: "pulse-glow 2s ease-in-out infinite" }}
+            />
+            <span className="font-mono text-[10px] text-emerald-400">LIVE &middot; SEPOLIA</span>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-700 mb-2.5">
+              Encrypted Bid Packets
+            </p>
+            <div className="space-y-1.5">
+              {MOCK_BIDS.map((v) => (
+                <div
+                  key={v.id}
+                  className="flex items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2.5"
+                >
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-fheBlue/25 bg-fheBlue/[0.10]">
+                    <Lock className="h-2.5 w-2.5 text-fheBlueSoft" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] font-bold text-slate-500">{v.id}</span>
+                      <span className="font-mono text-[10px] text-slate-700">{v.addr}</span>
+                    </div>
+                    <p className="font-mono text-[10px] text-fheBlueSoft/50 truncate">
+                      bid: {v.cipher}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-fheBlue/25 bg-fheBlue/[0.07] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-fheBlueSoft mb-1.5">
+                  FHE Comparison Core
+                </p>
+                <p className="font-mono text-xs text-slate-300">
+                  TFHE.min(euint64, euint64, euint64)
+                </p>
+                <p className="font-mono text-[10px] text-slate-600 mt-1">
+                  Zama FHEVM &middot; 3 encrypted operands
+                </p>
+              </div>
+              <div className="shrink-0 rounded-lg border border-fheBlue/20 bg-fheBlue/[0.10] px-2.5 py-1.5 text-right">
+                <p className="font-mono text-[9px] text-slate-600">euint64</p>
+                <p className="font-mono text-[9px] text-fheBlueSoft">private</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-zamaYellow/30 bg-zamaYellow/[0.07] p-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div>
+                <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-zamaYellow/80 mb-1">
+                  Winner Revealed
+                </p>
+                <p className="font-mono text-sm font-bold text-white">0x3BDC...6798</p>
+              </div>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_12px_rgba(255,210,8,0.4)]">
+                <CheckCircle className="h-4 w-4 text-ink" />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="font-mono text-[9px] text-slate-600">
+                Losing bids: permanently encrypted
+              </span>
+              <span className="ml-auto font-mono text-[9px] text-zamaYellow/50">KMS verified</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   return (
-    <div className="space-y-16">
+    <div className="space-y-28">
+
       {/* Hero */}
-      <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-8 py-14 text-white">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-400">
-          Zama FHEVM - Season 3 Builder Track
-        </p>
-        <h1 className="mb-4 text-4xl font-bold leading-tight tracking-tight">
-          Confidential supplier bidding<br />
-          <span className="text-indigo-400">powered by Zama FHE</span>
-        </h1>
-        <p className="mb-8 max-w-xl text-sm leading-relaxed text-slate-300">
-          Vendors submit encrypted price quotes. The smart contract compares bids
-          homomorphically - without ever decrypting them. Only the winner is revealed.
-          Losing amounts stay private forever.
-        </p>
-        <div className="flex flex-wrap gap-3 mb-10">
-          <Link
-            href="/create"
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors"
-          >
-            Create RFQ
-          </Link>
-          <Link
-            href="/rfqs"
-            className="rounded-xl border border-slate-600 px-5 py-2.5 text-sm font-semibold text-white hover:border-slate-400 hover:bg-slate-800 transition-colors"
-          >
-            View RFQs
-          </Link>
+      <section className="pt-10">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+
+          {/* Left: text */}
+          <div>
+            <ScrollReveal delay={0}>
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-white/[0.10] bg-white/[0.04] px-4 py-2 mb-8">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-zamaYellow"
+                  style={{ animation: "pulse-glow 2s ease-in-out infinite" }}
+                />
+                <span className="text-xs font-bold tracking-[0.15em] uppercase text-slate-300">
+                  Zama FHEVM&nbsp;&nbsp;&middot;&nbsp;&nbsp;Confidential Procurement&nbsp;&nbsp;&middot;&nbsp;&nbsp;Sepolia
+                </span>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={80}>
+              <h1 className="font-display text-5xl sm:text-6xl font-bold leading-[1.05] tracking-tight">
+                <span className="text-white">Private supplier bids.</span>
+                <br />
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: "linear-gradient(90deg, #FFD208 0%, #FFE55C 50%, #FFD208 100%)",
+                  }}
+                >
+                  Publicly verifiable winners.
+                </span>
+              </h1>
+            </ScrollReveal>
+
+            <ScrollReveal delay={120}>
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-slate-400">
+                SilentRFQ lets buyers run supplier RFQs on-chain while vendors submit encrypted bid
+                amounts. Zama FHE compares bids privately and reveals only the winning vendor.
+              </p>
+            </ScrollReveal>
+
+            <ScrollReveal delay={160}>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/create"
+                  className="inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-7 py-3.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_30px_rgba(255,210,8,0.35)] transition-all"
+                >
+                  <Zap className="h-4 w-4" />
+                  Launch RFQ
+                </Link>
+                <Link
+                  href="/rfqs"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/[0.15] px-7 py-3.5 text-sm font-bold text-white hover:bg-white/[0.05] hover:border-white/[0.25] transition-all"
+                >
+                  Browse live RFQs
+                </Link>
+                <Link
+                  href="/debug/bid"
+                  className="inline-flex items-center gap-2 rounded-xl border border-fheBlue/30 px-7 py-3.5 text-sm font-bold text-fheBlueSoft hover:bg-fheBlue/[0.08] hover:border-fheBlue/50 transition-all"
+                >
+                  View demo flow
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={200}>
+              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2.5 border-t border-white/[0.07] pt-8">
+                {TRUST_ITEMS.map((item) => (
+                  <span key={item} className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                    <CheckCircle className="h-3.5 w-3.5 text-zamaYellow/70" />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </ScrollReveal>
+          </div>
+
+          {/* Right: FHE visual */}
+          <ScrollReveal delay={160}>
+            <HeroVisual />
+          </ScrollReveal>
         </div>
-        <div className="flex flex-wrap items-center gap-4 border-t border-slate-800 pt-5">
-          {TRUST_ITEMS.map((item) => (
-            <span key={item} className="flex items-center gap-1.5 text-xs text-slate-400">
-              <CheckCircle className="h-3.5 w-3.5 text-indigo-400" />
-              {item}
-            </span>
-          ))}
-        </div>
-      </div>
+      </section>
 
       {/* Problem */}
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5">
-        <h2 className="mb-2 text-sm font-semibold text-amber-900">
-          The problem with public RFQs on-chain
-        </h2>
-        <p className="text-sm leading-relaxed text-amber-800">
-          On a standard EVM chain, every bid amount is visible in calldata. Competitors can
-          read a rival&apos;s price before the deadline and undercut it by one unit. Suppliers
-          can build long-term pricing databases on each other. This breaks the sealed-bid
-          model that makes competitive procurement work.
-        </p>
-      </div>
+      <ScrollReveal>
+        <section className="border-t border-white/[0.06] pt-20">
+          <div className="max-w-3xl">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-zamaYellow">
+              The Problem
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6 leading-tight">
+              Public on-chain RFQs leak supplier strategy.
+            </h2>
+            <p className="text-base leading-relaxed text-slate-400 mb-8">
+              On a standard EVM chain, every bid amount lands in calldata — readable by anyone.
+              Competitors read a rival&apos;s price before the deadline and undercut by one unit.
+              Suppliers build long-term pricing databases on each other. This destroys the
+              sealed-bid model that makes competitive procurement work.
+            </p>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+              <p className="text-sm font-bold text-white mb-4">SilentRFQ uses Zama FHEVM to fix this:</p>
+              <ul className="space-y-2.5">
+                {[
+                  "Bid amounts are TFHE-encrypted before leaving the vendor's browser.",
+                  "The smart contract compares bids homomorphically — no plaintext ever leaves FHE.",
+                  "Only the winning vendor index is publicly decrypted via the Zama KMS gateway.",
+                  "Losing bid amounts remain permanently encrypted on-chain.",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-zamaYellow" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
 
       {/* How it works */}
-      <div>
-        <h2 className="mb-5 text-xl font-bold text-slate-900">How it works</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {HOW_IT_WORKS.map(({ step, title, desc, icon: Icon }) => (
-            <div key={step} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600">
-                <Icon className="h-5 w-5 text-white" />
+      <section className="border-t border-white/[0.06] pt-20">
+        <ScrollReveal>
+          <div className="mb-12">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-zamaYellow">
+              How it works
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
+              Four steps. Zero plaintext.
+            </h2>
+          </div>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {HOW_IT_WORKS.map(({ step, title, desc }, i) => (
+            <ScrollReveal key={step} delay={Math.min(i * 80, 200)}>
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 hover:bg-white/[0.05] hover:border-white/[0.12] hover:shadow-[0_0_24px_rgba(255,210,8,0.05)] transition-all h-full">
+                <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-zamaYellow shadow-[0_0_16px_rgba(255,210,8,0.35)]">
+                  <span className="font-display text-sm font-bold text-ink">{step}</span>
+                </div>
+                <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
+                <p className="text-xs leading-relaxed text-slate-400">{desc}</p>
               </div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                Step {step}
-              </p>
-              <h3 className="mb-2 text-sm font-bold text-slate-900">{title}</h3>
-              <p className="text-xs leading-relaxed text-slate-500">{desc}</p>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Privacy model */}
-      <div>
-        <h2 className="mb-4 text-xl font-bold text-slate-900">Privacy model</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Public On-Chain
+      <section className="border-t border-white/[0.06] pt-20">
+        <ScrollReveal>
+          <div className="mb-12">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-zamaYellow">
+              Privacy model
             </p>
-            <ul className="space-y-2">
-              {PUBLIC_ITEMS.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
+              What stays public. What stays private.
+            </h2>
           </div>
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-indigo-600">
-              Encrypted / Private
-            </p>
-            <ul className="space-y-2">
-              {PRIVATE_ITEMS.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-indigo-800">
-                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-400" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Demo walkthrough */}
-      <div>
-        <h2 className="mb-4 text-xl font-bold text-slate-900">Demo walkthrough</h2>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <ol className="space-y-3">
-            {DEMO_STEPS.map((text, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
-                  {i + 1}
-                </span>
-                {text}
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-
-      {/* For evaluators */}
-      <div>
-        <h2 className="mb-4 text-xl font-bold text-slate-900">Built for evaluators</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {FOR_EVALUATORS.map(({ title, desc }) => (
-            <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-2 flex items-center gap-2">
-                <Shield className="h-4 w-4 text-indigo-500" />
-                <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-500">{desc}</p>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <ScrollReveal delay={0}>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 h-full">
+              <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                Public On-Chain
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "RFQ description and deadline",
+                  "Vendor wallet addresses",
+                  "Total bid count",
+                  "Winner address (after reveal only)",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-slate-400">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
+          </ScrollReveal>
+          <ScrollReveal delay={80}>
+            <div className="rounded-2xl border border-fheBlue/20 bg-fheBlue/[0.06] p-6 h-full">
+              <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-fheBlueSoft">
+                Encrypted / Private
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "Individual bid amounts during bidding",
+                  "Losing bid amounts (permanently encrypted)",
+                  "Winning bid amount (buyer-only FHE access)",
+                  "Live ranking during bidding period",
+                  "Encrypted comparison path",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-slate-400">
+                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fheBlueSoft" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* Built for evaluators */}
+      <section className="border-t border-white/[0.06] pt-20 pb-8">
+        <ScrollReveal>
+          <div className="mb-12">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-zamaYellow">
+              Built for evaluators
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
+              What to verify.
+            </h2>
+            <p className="max-w-2xl text-slate-400">
+              The full RFQ lifecycle has been tested end-to-end on Sepolia. Every step is
+              independently verifiable on-chain.
+            </p>
+          </div>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-10">
+          {FOR_EVALUATORS.map(({ title, desc }, i) => (
+            <ScrollReveal key={title} delay={Math.min(i * 80, 200)}>
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 hover:border-fheBlue/20 hover:bg-fheBlue/[0.03] transition-all h-full">
+                <Shield className="h-4 w-4 text-fheBlueSoft mb-3" />
+                <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
+                <p className="text-xs leading-relaxed text-slate-400">{desc}</p>
+              </div>
+            </ScrollReveal>
           ))}
         </div>
-      </div>
+        <ScrollReveal delay={120}>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/rfqs"
+              className="inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-5 py-2.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_25px_rgba(255,210,8,0.3)] transition-all"
+            >
+              <Trophy className="h-4 w-4" />
+              Open RFQ Dashboard
+            </Link>
+            <Link
+              href="/debug/bid"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.10] bg-white/[0.03] px-5 py-2.5 text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
+            >
+              Encrypted Bid Debug
+            </Link>
+            <Link
+              href="/debug/reveal"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.10] bg-white/[0.03] px-5 py-2.5 text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
+            >
+              Gateway Reveal Debug
+            </Link>
+          </div>
+        </ScrollReveal>
+      </section>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
 
 export function AddressCopy({ address }: { address: string }) {
   const [copied, setCopied] = useState(false);
@@ -14,13 +15,21 @@ export function AddressCopy({ address }: { address: string }) {
   };
 
   return (
-    <span className="inline-flex items-center gap-1 font-mono text-sm">
-      <span title={address}>{truncated}</span>
+    <span className="inline-flex items-center gap-1.5">
+      <span title={address} className="font-mono text-sm text-slate-300">
+        {truncated}
+      </span>
       <button
         onClick={copy}
-        className="text-xs text-gray-500 hover:text-gray-800 underline"
+        className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-300 transition-colors"
+        title="Copy full address"
       >
-        {copied ? "Copied!" : "Copy"}
+        {copied ? (
+          <Check className="h-3 w-3 text-success" />
+        ) : (
+          <Copy className="h-3 w-3" />
+        )}
+        {copied && <span className="text-success font-medium">Copied</span>}
       </button>
     </span>
   );

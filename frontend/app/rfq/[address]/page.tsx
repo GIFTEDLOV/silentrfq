@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAccount } from "wagmi";
-import { ChevronLeft, ExternalLink, Share2 } from "lucide-react";
+import { CheckCircle, ChevronLeft, ExternalLink, Share2, ShieldCheck, Trophy } from "lucide-react";
 import { AddressCopy } from "@/components/AddressCopy";
 import { LifecycleTimeline } from "@/components/LifecycleTimeline";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { PrivacyPanel } from "@/components/PrivacyPanel";
 import { RoleIndicator } from "@/components/RoleIndicator";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
@@ -25,9 +26,9 @@ function formatDate(unixSeconds: bigint): string {
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
-      <p className="text-xs font-medium text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm text-slate-900">{value}</div>
+    <div className="flex flex-col gap-0.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{label}</p>
+      <div className="text-sm text-slate-200">{value}</div>
     </div>
   );
 }
@@ -91,63 +92,86 @@ export default function RFQDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-4 w-24 rounded bg-slate-200 animate-pulse" />
-        <div className="h-8 w-64 rounded bg-slate-200 animate-pulse" />
-        <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
+      <div className="space-y-4 pt-4">
+        <div className="h-4 w-24 rounded-lg bg-white/[0.06] animate-pulse" />
+        <div className="h-10 w-80 rounded-lg bg-white/[0.06] animate-pulse" />
+        <div className="h-32 rounded-2xl bg-white/[0.06] animate-pulse" />
       </div>
     );
   }
 
   if (isError || buyer === undefined) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">
+      <div className="rounded-2xl border border-danger/20 bg-danger/[0.06] p-5 text-sm text-red-400">
         Failed to load RFQ. Check the address and your wallet network.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Back link */}
+    <div className="space-y-6 pt-2">
+      {/* Back link — no reveal, always visible */}
       <Link
         href="/rfqs"
-        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+        className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-white transition-colors"
       >
         <ChevronLeft className="h-4 w-4" />
         All RFQs
       </Link>
 
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">
-            {description ?? "RFQ Detail"}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-slate-400 break-all">{rfqAddress}</span>
-            {isSepoliaChain && (
-              <a
-                href={`https://sepolia.etherscan.io/address/${rfqAddress}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
-              >
-                Etherscan
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+      {/* Verified result banner */}
+      {winnerRevealed && (
+        <ScrollReveal delay={0}>
+          <div className="rounded-xl border border-zamaYellow/25 bg-zamaYellow/[0.05] px-5 py-3.5 flex items-center gap-4 shadow-[0_0_24px_rgba(255,210,8,0.05)]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_10px_rgba(255,210,8,0.4)]">
+              <ShieldCheck className="h-3.5 w-3.5 text-ink" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white">Winner verified via Zama KMS gateway</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Losing bid amounts remain permanently encrypted on-chain
+              </p>
+            </div>
+            <span className="shrink-0 font-mono text-[10px] font-bold text-zamaYellow/60 tracking-widest">
+              VERIFIED &middot; SEPOLIA
+            </span>
           </div>
+        </ScrollReveal>
+      )}
+
+      {/* Page header */}
+      <ScrollReveal delay={winnerRevealed ? 80 : 0}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">
+              {description ?? "RFQ Detail"}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-slate-600 break-all">{rfqAddress}</span>
+              {isSepoliaChain && (
+                <a
+                  href={`https://sepolia.etherscan.io/address/${rfqAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-fheBlueSoft hover:underline"
+                >
+                  Etherscan <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          </div>
+          <StatusBadge status={status} />
         </div>
-        <StatusBadge status={status} />
-      </div>
+      </ScrollReveal>
 
       {/* Lifecycle timeline */}
-      <LifecycleTimeline
-        pastDeadline={pastDeadline}
-        finalized={finalized ?? false}
-        winnerRevealed={winnerRevealed ?? false}
-      />
+      <ScrollReveal delay={winnerRevealed ? 120 : 80}>
+        <LifecycleTimeline
+          pastDeadline={pastDeadline}
+          finalized={finalized ?? false}
+          winnerRevealed={winnerRevealed ?? false}
+        />
+      </ScrollReveal>
 
       {/* Two-column grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -156,160 +180,205 @@ export default function RFQDetailPage() {
         <div className="space-y-5 lg:col-span-3">
 
           {/* RFQ info card */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-slate-800">RFQ Details</h2>
-            <div className="space-y-4">
-              <InfoRow label="Buyer" value={<AddressCopy address={buyer} />} />
-              <InfoRow label="Description" value={description ?? "-"} />
-              <InfoRow
-                label="Deadline"
-                value={
-                  deadline !== undefined ? (
-                    <span>
-                      {formatDate(deadline)}{" "}
-                      <span className={`text-xs ${pastDeadline ? "text-red-500" : "text-emerald-600"}`}>
-                        ({pastDeadline ? "expired" : "active"})
+          <ScrollReveal delay={winnerRevealed ? 160 : 120}>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+              <h2 className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                RFQ Details
+              </h2>
+              <div className="space-y-5">
+                <InfoRow label="Buyer" value={<AddressCopy address={buyer} />} />
+                <InfoRow label="Description" value={description ?? "—"} />
+                <InfoRow
+                  label="Deadline"
+                  value={
+                    deadline !== undefined ? (
+                      <span>
+                        {formatDate(deadline)}{" "}
+                        <span
+                          className={`text-xs font-semibold ${
+                            pastDeadline ? "text-red-400" : "text-emerald-400"
+                          }`}
+                        >
+                          ({pastDeadline ? "expired" : "active"})
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    "-"
-                  )
-                }
-              />
-              <InfoRow
-                label="Vendors"
-                value={vendorCount !== undefined ? `${vendorCount.toString()} submitted` : "-"}
-              />
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+                <InfoRow
+                  label="Vendors"
+                  value={
+                    vendorCount !== undefined
+                      ? `${vendorCount.toString()} submitted`
+                      : "—"
+                  }
+                />
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
 
           {/* Winner card */}
           {winnerRevealed && winnerAddr && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-bold text-emerald-900">Winner Revealed</p>
-                <button
-                  onClick={() => navigator.clipboard.writeText(window.location.href)}
-                  className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 transition-colors"
-                  title="Copy link to this RFQ"
-                >
-                  <Share2 className="h-3 w-3" />
-                  Share
-                </button>
+            <ScrollReveal delay={200}>
+              <div className="rounded-2xl border border-zamaYellow/40 bg-zamaYellow/[0.06] p-6 shadow-[0_0_50px_rgba(255,210,8,0.08)]">
+                <div className="mb-5 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_24px_rgba(255,210,8,0.45)]">
+                      <Trophy className="h-6 w-6 text-ink" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-zamaYellow/60">
+                        Verified Result
+                      </p>
+                      <p className="font-display text-xl font-bold text-white">Winner Revealed</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(window.location.href)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.12] px-3 py-1.5 text-xs font-medium text-slate-400 hover:border-white/[0.22] hover:text-white transition-colors"
+                    title="Copy link to this RFQ"
+                  >
+                    <Share2 className="h-3 w-3" />
+                    Share
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-zamaYellow/20 bg-black/[0.20] p-5 mb-4">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                    Winning Vendor Address
+                  </p>
+                  <p className="font-mono text-sm font-bold text-white break-all leading-relaxed mb-3">
+                    {winnerAddr}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <AddressCopy address={winnerAddr as `0x${string}`} />
+                    {isSepoliaChain && (
+                      <a
+                        href={`https://sepolia.etherscan.io/address/${winnerAddr}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-fheBlueSoft hover:underline"
+                      >
+                        View on Etherscan <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs leading-relaxed text-slate-500">
+                  Only the winning vendor address was publicly decrypted via the Zama KMS gateway.
+                  All losing bid amounts remain permanently encrypted on-chain.
+                </p>
               </div>
-              <div className="mt-2">
-                <AddressCopy address={winnerAddr as `0x${string}`} />
-              </div>
-              {isSepoliaChain && (
-                <a
-                  href={`https://sepolia.etherscan.io/address/${winnerAddr}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
-                >
-                  View on Etherscan
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-              <p className="mt-3 text-xs text-emerald-700">
-                Losing bid amounts remain encrypted and private. Only the winning vendor
-                index was publicly decrypted via the Zama KMS gateway.
-              </p>
-            </div>
+            </ScrollReveal>
           )}
 
           {/* Privacy model */}
-          <PrivacyPanel />
+          <ScrollReveal delay={winnerRevealed ? 200 : 160}>
+            <PrivacyPanel />
+          </ScrollReveal>
         </div>
 
         {/* Right column */}
         <div className="space-y-4 lg:col-span-2">
+          <ScrollReveal delay={winnerRevealed ? 160 : 120}>
+            <div className="space-y-4">
+              {/* Role indicator */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Your role:</span>
+                <RoleIndicator isConnected={isConnected} isBuyer={isBuyer} />
+              </div>
 
-          {/* Role indicator */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Your role:</span>
-            <RoleIndicator isConnected={isConnected} isBuyer={isBuyer} />
-          </div>
+              {/* Bidding open */}
+              {!finalized && !pastDeadline && (
+                <BidSection
+                  rfqAddress={rfqAddress}
+                  buyerAddress={buyer}
+                  onSuccess={refetch}
+                />
+              )}
 
-          {/* Bidding open */}
-          {!finalized && !pastDeadline && (
-            <BidSection
-              rfqAddress={rfqAddress}
-              buyerAddress={buyer}
-              onSuccess={refetch}
-            />
-          )}
+              {/* Deadline passed, not yet finalized */}
+              {pastDeadline && !finalized && (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
+                  <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                      Deadline Passed
+                    </p>
+                    <h3 className="font-display text-lg font-bold text-white">Finalize RFQ</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Lock the winning bid and authorize public decryption via the Zama KMS gateway.
+                    </p>
+                  </div>
 
-          {/* Deadline passed, not yet finalized */}
-          {pastDeadline && !finalized && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-              <h3 className="text-sm font-semibold text-slate-800">Finalize RFQ</h3>
-              <p className="text-xs text-slate-500">
-                The deadline has passed. The buyer finalizes to lock in the winning bid
-                and authorize public decryption.
-              </p>
+                  {!isConnected && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-slate-300">Connect your wallet to finalize.</p>
+                      <WalletConnect />
+                    </div>
+                  )}
 
-              {!isConnected && (
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-600">Connect your wallet to finalize.</p>
-                  <WalletConnect />
+                  {isConnected && !isBuyer && buyer !== undefined && (
+                    <p className="text-sm text-slate-500">
+                      Only the buyer can finalize this RFQ.
+                    </p>
+                  )}
+
+                  {isConnected && isBuyer && (
+                    <NetworkGuard>
+                      <div className="space-y-3">
+                        {hasNoBids && (
+                          <p className="text-sm text-slate-500">
+                            No bids were submitted. Cannot finalize.
+                          </p>
+                        )}
+                        <button
+                          onClick={finalize}
+                          disabled={!canFinalize || isPending || isConfirming}
+                          className="w-full rounded-xl bg-white px-4 py-3 text-sm font-bold text-ink hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                        >
+                          {isPending
+                            ? "Waiting for wallet..."
+                            : isConfirming
+                            ? "Confirming..."
+                            : "Finalize RFQ"}
+                        </button>
+                      </div>
+                    </NetworkGuard>
+                  )}
+
+                  <TxStatus
+                    isPending={isPending}
+                    isConfirming={isConfirming}
+                    isSuccess={finalizeSuccess}
+                    error={error}
+                    hash={hash}
+                  />
                 </div>
               )}
 
-              {isConnected && !isBuyer && buyer !== undefined && (
-                <p className="text-sm text-slate-500">
-                  Only the buyer can finalize this RFQ.
-                </p>
+              {/* Finalized, winner not yet revealed */}
+              {finalized && !winnerRevealed && (
+                <RevealSection rfqAddress={rfqAddress} onSuccess={refetch} />
               )}
 
-              {isConnected && isBuyer && (
-                <NetworkGuard>
-                  <div className="space-y-3">
-                    {hasNoBids && (
-                      <p className="text-sm text-slate-500">
-                        No bids were submitted. Cannot finalize.
-                      </p>
-                    )}
-                    <button
-                      onClick={finalize}
-                      disabled={!canFinalize || isPending || isConfirming}
-                      className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
-                    >
-                      {isPending
-                        ? "Waiting for wallet..."
-                        : isConfirming
-                        ? "Confirming..."
-                        : "Finalize RFQ"}
-                    </button>
+              {/* Complete */}
+              {winnerRevealed && (
+                <div className="rounded-2xl border border-zamaYellow/30 bg-zamaYellow/[0.05] p-6 space-y-3 shadow-[0_0_30px_rgba(255,210,8,0.07)]">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-zamaYellow" />
+                    <p className="font-display text-lg font-bold text-white">RFQ Complete</p>
                   </div>
-                </NetworkGuard>
+                  <p className="text-sm text-slate-400">
+                    The winner has been publicly revealed via Zama KMS gateway decryption.
+                    No further actions are available.
+                  </p>
+                </div>
               )}
-
-              <TxStatus
-                isPending={isPending}
-                isConfirming={isConfirming}
-                isSuccess={finalizeSuccess}
-                error={error}
-                hash={hash}
-              />
             </div>
-          )}
-
-          {/* Finalized, winner not yet revealed */}
-          {finalized && !winnerRevealed && (
-            <RevealSection rfqAddress={rfqAddress} onSuccess={refetch} />
-          )}
-
-          {/* Complete */}
-          {winnerRevealed && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-              <p className="text-sm font-bold text-emerald-900">RFQ Complete</p>
-              <p className="mt-1.5 text-xs text-emerald-700">
-                The winner has been publicly revealed via Zama KMS gateway decryption.
-                No further actions are available.
-              </p>
-            </div>
-          )}
+          </ScrollReveal>
         </div>
       </div>
     </div>

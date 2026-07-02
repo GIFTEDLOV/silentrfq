@@ -10,8 +10,18 @@ type Props = {
 
 export function RFQStatsBar({ addresses }: Props) {
   const contracts = addresses.flatMap((addr) => [
-    { address: addr, abi: SILENT_RFQ_ABI, functionName: "finalized" as const, chainId: EXPECTED_CHAIN_ID },
-    { address: addr, abi: SILENT_RFQ_ABI, functionName: "winnerRevealed" as const, chainId: EXPECTED_CHAIN_ID },
+    {
+      address: addr,
+      abi: SILENT_RFQ_ABI,
+      functionName: "finalized" as const,
+      chainId: EXPECTED_CHAIN_ID,
+    },
+    {
+      address: addr,
+      abi: SILENT_RFQ_ABI,
+      functionName: "winnerRevealed" as const,
+      chainId: EXPECTED_CHAIN_ID,
+    },
   ]);
 
   const { data, isLoading } = useReadContracts({
@@ -35,21 +45,24 @@ export function RFQStatsBar({ addresses }: Props) {
   }
 
   const stats = [
-    { label: "Total RFQs",       value: total,                       icon: List,        color: "text-slate-500" },
-    { label: "Open",             value: isLoading ? "-" : open,       icon: BarChart2,   color: "text-emerald-600" },
-    { label: "Finalized",        value: isLoading ? "-" : finalized,  icon: CheckCircle, color: "text-slate-500" },
-    { label: "Winners Revealed", value: isLoading ? "-" : revealed,   icon: Trophy,      color: "text-indigo-600" },
+    { label: "Total RFQs",       value: total,                      icon: List,        accent: "text-slate-400" },
+    { label: "Open",             value: isLoading ? "—" : open,      icon: BarChart2,   accent: "text-emerald-400" },
+    { label: "Finalized",        value: isLoading ? "—" : finalized, icon: CheckCircle, accent: "text-slate-500" },
+    { label: "Winners Revealed", value: isLoading ? "—" : revealed,  icon: Trophy,      accent: "text-zamaYellow" },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {stats.map(({ label, value, icon: Icon, color }) => (
-        <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-3xl font-bold text-slate-900">{value}</p>
-            <Icon className={`h-5 w-5 ${color}`} />
+      {stats.map(({ label, value, icon: Icon, accent }) => (
+        <div
+          key={label}
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"
+        >
+          <div className="flex items-start justify-between">
+            <p className="font-display text-3xl font-bold text-white">{value}</p>
+            <Icon className={`h-5 w-5 ${accent}`} />
           </div>
-          <p className="mt-1 text-xs text-slate-500">{label}</p>
+          <p className="mt-2 text-xs font-medium text-slate-500">{label}</p>
         </div>
       ))}
     </div>

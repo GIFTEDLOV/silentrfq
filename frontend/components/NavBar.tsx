@@ -5,18 +5,41 @@ import { WalletConnect } from "@/components/WalletConnect";
 
 export function NavBar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
-      <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-gray-950/80 backdrop-blur-md">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-bold text-lg tracking-tight text-slate-900">
-            Silent<span className="text-indigo-600">RFQ</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="font-display text-xl font-bold text-white tracking-tight">
+              SilentRFQ
+            </span>
+            <span className="hidden sm:inline-block text-[10px] font-bold tracking-widest uppercase bg-zamaYellow/10 text-zamaYellow border border-zamaYellow/20 rounded-full px-2.5 py-0.5">
+              Sepolia
+            </span>
           </Link>
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500">
-            <Link href="/rfqs" className="hover:text-slate-900 transition-colors">
-              Browse RFQs
+          <nav className="hidden sm:flex items-center gap-6">
+            <Link
+              href="/"
+              className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+            >
+              Home
             </Link>
-            <Link href="/create" className="hover:text-slate-900 transition-colors">
+            <Link
+              href="/rfqs"
+              className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+            >
+              RFQs
+            </Link>
+            <Link
+              href="/create"
+              className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+            >
               Create RFQ
+            </Link>
+            <Link
+              href="/debug/bid"
+              className="text-sm font-medium text-slate-600 hover:text-slate-400 transition-colors"
+            >
+              Debug
             </Link>
           </nav>
         </div>

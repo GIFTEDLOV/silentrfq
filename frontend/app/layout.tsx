@@ -1,24 +1,48 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { NavBar } from "@/components/NavBar";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "SilentRFQ",
-  description: "Confidential procurement bidding on Zama FHEVM",
+  title: "SilentRFQ — Confidential Procurement Infrastructure",
+  description:
+    "Encrypted supplier RFQs powered by Zama FHE. Bids stay private. Only the winner is revealed.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
-        <Providers>
-          <NavBar />
-          <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
-        </Providers>
+    <html
+      lang="en"
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="min-h-screen font-sans antialiased bg-gray-950">
+        <AnimatedBackground />
+        <div className="relative z-10 min-h-screen">
+          <Providers>
+            <NavBar />
+            <main className="max-w-6xl mx-auto px-6 py-10">{children}</main>
+          </Providers>
+        </div>
       </body>
     </html>
   );

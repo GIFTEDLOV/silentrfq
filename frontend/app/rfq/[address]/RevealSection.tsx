@@ -7,6 +7,7 @@ import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
 import { EXPECTED_CHAIN_ID, SILENT_RFQ_ABI } from "@/config/contracts";
 import { useGatewayReveal } from "@/hooks/useGatewayReveal";
+
 const BYTES32_ZERO =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -45,7 +46,6 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
 
   const isOnExpectedChain = chainId === EXPECTED_CHAIN_ID;
 
-  // Read the encrypted best vendor index handle
   const { data: handle } = useReadContract({
     address: rfqAddress,
     abi: SILENT_RFQ_ABI,
@@ -58,7 +58,6 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
     if (isSuccess) onSuccess();
   }, [isSuccess, onSuccess]);
 
-  // Decode winner index from SDK result for preview before on-chain confirmation
   let decryptedWinnerIndex: bigint | null = null;
   if (decryptResult?.abiEncodedClearValues) {
     try {
@@ -89,107 +88,98 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
     !isConfirming;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-      <h2 className="text-sm font-semibold text-indigo-900">Reveal Winner</h2>
-      <p className="text-xs text-indigo-700">
-        Uses the Zama KMS gateway to publicly decrypt the winning vendor index.
-        Requires Sepolia.
-      </p>
-
-      {/* Sepolia gate */}
-      {!isOnExpectedChain && (
-        <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
-          Gateway reveal requires Sepolia. Switch your wallet network to proceed.
+    <div className="rounded-2xl border border-fheBlue/20 bg-fheBlue/[0.05] p-6 space-y-5 shadow-[0_0_30px_rgba(47,107,255,0.06)]">
+      <div>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-fheBlueSoft">
+          KMS Gateway Decryption
         </p>
+        <h2 className="font-display text-lg font-bold text-white">Reveal Winner</h2>
+        <p className="mt-1 text-xs text-slate-400">
+          Uses the Zama KMS gateway to publicly decrypt the winning vendor index. Requires Sepolia.
+        </p>
+      </div>
+
+      {!isOnExpectedChain && (
+        <div className="rounded-xl border border-zamaYellow/20 bg-zamaYellow/[0.06] p-3 text-xs font-medium text-zamaYellow">
+          Gateway reveal requires Sepolia. Switch your wallet network to proceed.
+        </div>
       )}
 
-      {/* Wallet connect */}
       {!isConnected && <WalletConnect />}
 
       {isConnected && isOnExpectedChain && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* SDK init */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={initSdk}
-              disabled={
-                sdkStatus === "ready" || sdkStatus === "initializing"
-              }
-              className="rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-xs hover:bg-indigo-50 disabled:opacity-40 transition-colors"
-            >
-              {sdkStatus === "initializing"
-                ? "Initializing..."
-                : "Initialize SDK"}
-            </button>
-            <span
-              className={`text-xs font-medium ${
-                sdkStatus === "ready"
-                  ? "text-emerald-700"
-                  : sdkStatus === "error"
-                  ? "text-red-600"
-                  : sdkStatus === "initializing"
-                  ? "text-indigo-600"
-                  : "text-indigo-400"
-              }`}
-            >
-              {sdkStatus === "idle" && "SDK not initialized"}
-              {sdkStatus === "initializing" && "Connecting to Zama relayer..."}
-              {sdkStatus === "ready" && "SDK ready"}
-              {sdkStatus === "error" && `Error: ${sdkError}`}
-            </span>
-            {sdkStatus === "error" && (
+          <div className="rounded-xl border border-fheBlue/20 bg-fheBlue/[0.04] p-4 space-y-3">
+            <p className="text-xs font-bold text-fheBlueSoft">Initialize SDK</p>
+            <div className="flex items-center gap-3">
               <button
                 onClick={initSdk}
-                className="text-xs text-indigo-600 underline"
+                disabled={sdkStatus === "ready" || sdkStatus === "initializing"}
+                className="rounded-xl border border-fheBlue/30 bg-fheBlue/[0.10] px-3 py-1.5 text-xs font-semibold text-fheBlueSoft hover:bg-fheBlue hover:text-white disabled:opacity-40 transition-all"
               >
-                Retry
+                {sdkStatus === "initializing" ? "Initializing..." : "Initialize SDK"}
               </button>
-            )}
+              <span
+                className={`text-xs font-medium ${
+                  sdkStatus === "ready"
+                    ? "text-emerald-400"
+                    : sdkStatus === "error"
+                    ? "text-red-400"
+                    : sdkStatus === "initializing"
+                    ? "text-fheBlueSoft"
+                    : "text-slate-600"
+                }`}
+              >
+                {sdkStatus === "idle" && "Not initialized"}
+                {sdkStatus === "initializing" && "Connecting to Zama relayer..."}
+                {sdkStatus === "ready" && "SDK ready"}
+                {sdkStatus === "error" && `Error: ${sdkError}`}
+              </span>
+              {sdkStatus === "error" && (
+                <button onClick={initSdk} className="text-xs text-fheBlueSoft underline">
+                  Retry
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Step 1 — Request decryption */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-indigo-800">
-              Step 1 — Request public decryption from Zama KMS
+          {/* Step 1 */}
+          <div className="rounded-xl border border-fheBlue/20 bg-fheBlue/[0.04] p-4 space-y-3">
+            <p className="text-xs font-bold text-fheBlueSoft">Step 1 — Request KMS Decryption</p>
+            <p className="text-xs text-slate-500">
+              Sends the encrypted handle to the Zama KMS gateway for public decryption proof generation.
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handle && requestDecrypt(handle as `0x${string}`)}
                 disabled={!canDecrypt}
-                className="rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-xs hover:bg-indigo-50 disabled:opacity-40 transition-colors"
+                className="rounded-xl border border-fheBlue/30 bg-fheBlue/[0.10] px-3 py-1.5 text-xs font-semibold text-fheBlueSoft hover:bg-fheBlue hover:text-white disabled:opacity-40 transition-all"
               >
-                {decryptStatus === "decrypting"
-                  ? "Requesting from KMS..."
-                  : "Request Decryption"}
+                {decryptStatus === "decrypting" ? "Requesting from KMS..." : "Request Decryption"}
               </button>
               {decryptStatus !== "idle" && (
-                <button
-                  onClick={resetDecrypt}
-                  className="text-xs text-indigo-600 underline"
-                >
+                <button onClick={resetDecrypt} className="text-xs text-fheBlueSoft underline">
                   Reset
                 </button>
               )}
             </div>
 
-            {/* Pre-flight hint */}
             {!canDecrypt && sdkStatus === "ready" && (
-              <p className="text-xs text-indigo-500">
+              <p className="text-xs text-slate-600">
                 {isHandleZero && "No bids on this RFQ (handle is zero)."}
                 {decryptStatus === "decrypting" && "Waiting for KMS response..."}
               </p>
             )}
 
-            {/* Relayer not-ready error */}
             {decryptStatus === "error" && (
-              <div className="rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <div className="rounded-xl border border-danger/20 bg-danger/[0.06] p-3 text-xs text-red-400">
                 {isNotReadyError(decryptError) ? (
                   <>
-                    <strong>Handle not ready for decryption yet.</strong>
-                    <br />
+                    <strong>Handle not ready for decryption yet.</strong>{" "}
                     The Zama relayer may still be indexing the{" "}
-                    <code>finalize()</code> transaction. Wait 30-60 seconds,
-                    click Reset, then try again.
+                    <code className="font-mono">finalize()</code> transaction. Wait 30–60 seconds,
+                    click Reset, then retry.
                   </>
                 ) : (
                   <>Decryption error: {decryptError}</>
@@ -197,48 +187,37 @@ export function RevealSection({ rfqAddress, onSuccess }: Props) {
               </div>
             )}
 
-            {/* Decrypt result */}
             {decryptStatus === "done" && decryptResult && (
-              <div className="rounded border border-green-200 bg-green-50 p-3 text-xs space-y-1">
-                <p className="font-semibold text-green-800">
-                  Decryption successful.
-                </p>
+              <div className="rounded-xl border border-success/20 bg-success/[0.06] p-3 text-xs space-y-1">
+                <p className="font-bold text-emerald-400">Decryption successful.</p>
                 {decryptedWinnerIndex !== null && (
-                  <p className="text-green-700">
+                  <p className="text-slate-300">
                     Decrypted winner index:{" "}
-                    <span className="font-mono font-bold">
+                    <span className="font-mono font-bold text-white">
                       {decryptedWinnerIndex.toString()}
                     </span>
                   </p>
                 )}
-                <p className="text-green-600">
-                  KMS-signed proof ready. Proceed to Step 2.
-                </p>
+                <p className="text-slate-500">KMS-signed proof ready. Proceed to Step 2.</p>
               </div>
             )}
           </div>
 
-          {/* Step 2 — Submit on-chain */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-indigo-800">
-              Step 2 — Submit proof on-chain
-            </p>
-            <p className="text-xs text-indigo-600">
-              Permissionless — any wallet can call this. The contract verifies
-              the KMS signatures.
+          {/* Step 2 */}
+          <div className="rounded-xl border border-fheBlue/20 bg-fheBlue/[0.04] p-4 space-y-3">
+            <p className="text-xs font-bold text-fheBlueSoft">Step 2 — Submit Proof On-Chain</p>
+            <p className="text-xs text-slate-500">
+              Permissionless — any wallet can call this. The contract verifies the KMS signatures
+              and records the winner.
             </p>
             <button
               onClick={() => {
                 if (handle && decryptResult) {
-                  submitReveal(
-                    rfqAddress,
-                    handle as `0x${string}`,
-                    decryptResult
-                  );
+                  submitReveal(rfqAddress, handle as `0x${string}`, decryptResult);
                 }
               }}
               disabled={!canSubmit}
-              className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-40 transition-colors"
+              className="rounded-xl bg-fheBlue px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-600 hover:shadow-[0_0_20px_rgba(47,107,255,0.4)] disabled:opacity-40 transition-all"
             >
               {isPending
                 ? "Waiting for wallet..."
