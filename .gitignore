@@ -30,3 +30,4 @@ frontend/out/
 frontend/.vercel/
 frontend/.env.local
 
+.vercel
