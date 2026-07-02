@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen font-sans antialiased bg-gray-950">
+      <body className="min-h-screen font-sans antialiased bg-[#01030A]">
         <AnimatedBackground />
         <div className="relative z-10 min-h-screen">
           <Providers>

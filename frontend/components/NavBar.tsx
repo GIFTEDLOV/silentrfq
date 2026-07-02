@@ -5,7 +5,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 
 export function NavBar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-gray-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#01030A]/88 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2.5">

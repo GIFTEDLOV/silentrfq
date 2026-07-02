@@ -7,7 +7,7 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-[#02050F] text-slate-50 font-sans antialiased;
+    @apply bg-[#01030A] text-slate-50 font-sans antialiased;
   }
 }
 
