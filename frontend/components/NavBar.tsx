@@ -35,12 +35,6 @@ export function NavBar() {
             >
               Create RFQ
             </Link>
-            <Link
-              href="/debug/bid"
-              className="text-sm font-medium text-slate-600 hover:text-slate-400 transition-colors"
-            >
-              Debug
-            </Link>
           </nav>
         </div>
         <WalletConnect />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { CheckCircle, FileText, Lock, Trophy, Zap } from "lucide-react";
+import { CheckCircle, Copy, ExternalLink, FileText, Lock, Trophy, Zap } from "lucide-react";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { TxStatus } from "@/components/TxStatus";
@@ -40,8 +40,9 @@ export default function CreatePage() {
   const [description, setDescription] = useState("");
   const [deadlineInput, setDeadlineInput] = useState("");
   const [deadlineError, setDeadlineError] = useState("");
+  const [copied, setCopied] = useState(false);
   const { isConnected } = useAccount();
-  const { create, hash, isPending, isConfirming, isSuccess, error, reset } = useCreateRFQ();
+  const { create, hash, isPending, isConfirming, isSuccess, createdRFQAddress, error, reset } = useCreateRFQ();
 
   const validateDeadline = (value: string): string => {
     if (!value) return "";
@@ -63,34 +64,76 @@ export default function CreatePage() {
     create(description.trim(), deadlineUnix);
   };
 
+  const handleCopyAddress = () => {
+    if (!createdRFQAddress) return;
+    navigator.clipboard.writeText(createdRFQAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isSuccess) {
     return (
-      <div className="max-w-lg space-y-5 pt-4">
+      <div className="flex min-h-[72vh] flex-col items-center justify-center py-16 px-4">
         <ScrollReveal>
-          <div className="rounded-2xl border border-success/20 bg-success/[0.06] p-8 text-center shadow-[0_0_40px_rgba(16,185,129,0.06)]">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success/10 border border-success/20">
-              <CheckCircle className="h-7 w-7 text-emerald-400" />
+          <div className="w-full max-w-lg space-y-5">
+
+            {/* Success card */}
+            <div className="rounded-2xl border border-success/25 bg-success/[0.05] p-10 text-center space-y-5 shadow-[0_0_60px_rgba(16,185,129,0.07)]">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 border border-success/20">
+                <CheckCircle className="h-8 w-8 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="font-display text-3xl font-bold text-white">RFQ Created</h2>
+                <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                  Your confidential RFQ is live on Sepolia. Vendors can now submit encrypted bids — bid amounts are never visible on-chain.
+                </p>
+              </div>
+
+              {/* RFQ address */}
+              {createdRFQAddress && (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-left space-y-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                    RFQ Contract Address
+                  </p>
+                  <p className="font-mono text-sm text-white break-all leading-relaxed">
+                    {createdRFQAddress}
+                  </p>
+                  <button
+                    onClick={handleCopyAddress}
+                    className="flex items-center gap-1.5 text-xs font-medium text-fheBlueSoft hover:text-white transition-colors"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {copied ? "Copied!" : "Copy address"}
+                  </button>
+                </div>
+              )}
             </div>
-            <h2 className="font-display text-2xl font-bold text-white">RFQ Created</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Your confidential RFQ has been deployed on-chain. Vendors can now submit encrypted bids.
-            </p>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={80}>
-          <div className="flex gap-3">
-            <Link
-              href="/rfqs"
-              className="flex-1 rounded-xl border border-white/[0.10] bg-white/[0.03] px-4 py-2.5 text-center text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
-            >
-              View all RFQs
-            </Link>
-            <button
-              onClick={() => { reset(); setDescription(""); setDeadlineInput(""); }}
-              className="flex-1 rounded-xl bg-zamaYellow px-4 py-2.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.3)] transition-all"
-            >
-              Create Another
-            </button>
+
+            {/* Action buttons */}
+            <div className={`grid gap-3 ${createdRFQAddress ? "grid-cols-3" : "grid-cols-2"}`}>
+              {createdRFQAddress && (
+                <Link
+                  href={`/rfq/${createdRFQAddress}`}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-zamaYellow px-4 py-3 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.35)] transition-all"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View RFQ
+                </Link>
+              )}
+              <Link
+                href="/rfqs"
+                className="flex items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
+              >
+                Browse RFQs
+              </Link>
+              <button
+                onClick={() => { reset(); setDescription(""); setDeadlineInput(""); setCopied(false); }}
+                className="rounded-xl border border-white/[0.10] bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
+              >
+                Create Another
+              </button>
+            </div>
+
           </div>
         </ScrollReveal>
       </div>

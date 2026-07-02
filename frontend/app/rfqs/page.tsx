@@ -1,15 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { useAccount } from "wagmi";
+import { Plus, Wallet } from "lucide-react";
 import { RFQCard } from "@/components/RFQCard";
 import { RFQStatsBar } from "@/components/RFQStatsBar";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { WalletConnect } from "@/components/WalletConnect";
 import { FACTORY_ADDRESS, FACTORY_MISSING_MESSAGE } from "@/config/contracts";
-import { useGetRFQs } from "@/hooks/useFactory";
+import { useGetRFQs, useGetRFQsByBuyer } from "@/hooks/useFactory";
+
+type Tab = "all" | "mine";
 
 export default function RFQsPage() {
-  const { data: rfqAddresses, isLoading, isError } = useGetRFQs();
+  const [tab, setTab] = useState<Tab>("all");
+  const { isConnected, address: connectedAddress } = useAccount();
+
+  const { data: allRFQs, isLoading: allLoading, isError: allError } = useGetRFQs();
+  const { data: myRFQs, isLoading: myLoading, isError: myError } = useGetRFQsByBuyer(
+    tab === "mine" && isConnected ? connectedAddress : undefined
+  );
+
+  const rfqAddresses = tab === "all" ? allRFQs : myRFQs;
+  const isLoading = tab === "all" ? allLoading : myLoading;
+  const isError = tab === "all" ? allError : myError;
 
   return (
     <div className="space-y-8">
@@ -24,7 +39,7 @@ export default function RFQsPage() {
               Confidential RFQ Dashboard
             </h1>
             <p className="mt-2 text-sm text-slate-400">
-              Track live supplier RFQs without exposing bid amounts.
+              Buyers post procurement requests. Vendors submit encrypted bids. Bid amounts are never exposed on-chain.
             </p>
           </div>
           <Link
@@ -44,15 +59,52 @@ export default function RFQsPage() {
         </div>
       )}
 
-      {/* Stats */}
-      {rfqAddresses && rfqAddresses.length > 0 && (
+      {/* Tabs */}
+      <ScrollReveal delay={60}>
+        <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.02] p-1 w-fit">
+          {(["all", "mine"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-lg px-5 py-1.5 text-sm font-medium transition-all ${
+                tab === t
+                  ? "bg-white/[0.09] text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              {t === "all" ? "All RFQs" : "My RFQs"}
+            </button>
+          ))}
+        </div>
+      </ScrollReveal>
+
+      {/* Stats — only on All tab */}
+      {tab === "all" && allRFQs && allRFQs.length > 0 && (
         <ScrollReveal delay={80}>
-          <RFQStatsBar addresses={rfqAddresses} />
+          <RFQStatsBar addresses={allRFQs} />
+        </ScrollReveal>
+      )}
+
+      {/* My RFQs — not connected */}
+      {tab === "mine" && !isConnected && (
+        <ScrollReveal delay={80}>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-8 py-14 text-center space-y-5">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.04]">
+              <Wallet className="h-5 w-5 text-slate-500" />
+            </div>
+            <div>
+              <p className="font-display text-xl font-bold text-white">Connect your wallet</p>
+              <p className="mt-1.5 text-sm text-slate-400">
+                See the RFQs you created as a buyer on Sepolia.
+              </p>
+            </div>
+            <WalletConnect />
+          </div>
         </ScrollReveal>
       )}
 
       {/* Loading */}
-      {isLoading && (
+      {(tab === "all" || isConnected) && isLoading && (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div
@@ -64,23 +116,34 @@ export default function RFQsPage() {
       )}
 
       {/* Error */}
-      {isError && (
+      {(tab === "all" || isConnected) && isError && (
         <div className="rounded-xl border border-danger/20 bg-danger/[0.06] p-4 text-sm text-red-400">
           Failed to load RFQs. Check your RPC connection and wallet network.
         </div>
       )}
 
       {/* Empty state */}
-      {!isLoading && rfqAddresses && rfqAddresses.length === 0 && (
+      {(tab === "all" || isConnected) && !isLoading && rfqAddresses && rfqAddresses.length === 0 && (
         <ScrollReveal delay={120}>
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-8 py-20 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-zamaYellow/20 bg-zamaYellow/10">
               <Plus className="h-6 w-6 text-zamaYellow" />
             </div>
-            <p className="font-display text-xl font-bold text-white">No RFQs yet</p>
-            <p className="mt-2 text-sm text-slate-400">
-              Be the first to post a confidential procurement request on this network.
-            </p>
+            {tab === "all" ? (
+              <>
+                <p className="font-display text-xl font-bold text-white">No RFQs yet</p>
+                <p className="mt-2 text-sm text-slate-400">
+                  Be the first to post a confidential procurement request on this network.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-xl font-bold text-white">No RFQs created yet</p>
+                <p className="mt-2 text-sm text-slate-400">
+                  You haven&apos;t created any RFQs as a buyer on this network.
+                </p>
+              </>
+            )}
             <Link
               href="/create"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-5 py-2.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.35)] transition-all"
@@ -93,13 +156,13 @@ export default function RFQsPage() {
       )}
 
       {/* RFQ list */}
-      {rfqAddresses && rfqAddresses.length > 0 && (
+      {(tab === "all" || isConnected) && rfqAddresses && rfqAddresses.length > 0 && (
         <div>
           <ScrollReveal delay={100}>
             <div className="flex items-center gap-3 mb-4">
               <div className="h-px flex-1 bg-white/[0.06]" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-700">
-                Confidential procurement pipeline
+                {tab === "all" ? "Confidential procurement pipeline" : "Your procurement pipeline"}
               </span>
               <div className="h-px flex-1 bg-white/[0.06]" />
             </div>

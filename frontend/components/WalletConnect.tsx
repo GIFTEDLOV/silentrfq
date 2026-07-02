@@ -18,7 +18,21 @@ export function WalletConnect() {
               <button
                 onClick={openConnectModal}
                 type="button"
-                className="rounded-xl bg-zamaYellow px-4 py-2 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.35)] transition-all"
+                className="
+                  relative overflow-hidden rounded-xl
+                  border border-zamaYellow/30
+                  bg-gradient-to-b from-zamaYellow/[0.20] to-zamaYellow/[0.07]
+                  px-4 py-2 text-sm font-bold text-zamaYellow
+                  backdrop-blur-sm
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.13),inset_0_-1px_0_rgba(0,0,0,0.12)]
+                  hover:border-zamaYellow/50
+                  hover:from-zamaYellow/[0.28] hover:to-zamaYellow/[0.12]
+                  hover:shadow-[0_0_28px_rgba(255,210,8,0.28),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(0,0,0,0.12)]
+                  transition-all duration-200
+                  before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-[45%]
+                  before:bg-gradient-to-b before:from-white/[0.11] before:to-transparent
+                  before:pointer-events-none before:rounded-t-xl
+                "
               >
                 Connect Wallet
               </button>
@@ -42,7 +56,21 @@ export function WalletConnect() {
                 <button
                   onClick={openAccountModal}
                   type="button"
-                  className="rounded-xl border border-zamaYellow/30 bg-zamaYellow/10 px-4 py-2 text-sm font-semibold text-zamaYellow hover:bg-zamaYellow hover:text-ink transition-all"
+                  className="
+                    relative overflow-hidden rounded-xl
+                    border border-zamaYellow/25
+                    bg-gradient-to-b from-zamaYellow/[0.15] to-zamaYellow/[0.05]
+                    px-4 py-2 text-sm font-semibold text-zamaYellow
+                    backdrop-blur-sm
+                    shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]
+                    hover:border-zamaYellow/40
+                    hover:from-zamaYellow/[0.22] hover:to-zamaYellow/[0.09]
+                    hover:shadow-[0_0_20px_rgba(255,210,8,0.20),inset_0_1px_0_rgba(255,255,255,0.14)]
+                    transition-all duration-200
+                    before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-[40%]
+                    before:bg-gradient-to-b before:from-white/[0.08] before:to-transparent
+                    before:pointer-events-none before:rounded-t-xl
+                  "
                 >
                   {account.displayName}
                 </button>

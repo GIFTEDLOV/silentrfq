@@ -3,11 +3,13 @@ import puppeteer from 'puppeteer-core';
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const OUT = 'C:\\Users\\DELL\\silentrfq\\frontend\\docs\\screenshots\\dark-ui-review';
 
+const BASE = 'http://192.168.1.3:3000';
 const PAGES = [
-  { name: '01-home',       url: 'http://localhost:3000' },
-  { name: '02-rfqs',       url: 'http://localhost:3000/rfqs' },
-  { name: '03-create',     url: 'http://localhost:3000/create' },
-  { name: '04-rfq-detail', url: 'http://localhost:3000/rfq/0x6272ea767fa6e6668173F5a4D532885ce1D2502E' },
+  { name: '01-home',       url: `${BASE}` },
+  { name: '02-rfqs',       url: `${BASE}/rfqs` },
+  { name: '03-create',     url: `${BASE}/create` },
+  { name: '04-rfq-detail', url: `${BASE}/rfq/0x6272ea767fa6e6668173F5a4D532885ce1D2502E` },
+  { name: '05-debug-bid',  url: `${BASE}/debug/bid` },
 ];
 
 async function scrollToReveal(page) {
