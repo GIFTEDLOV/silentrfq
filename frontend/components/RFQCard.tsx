@@ -30,17 +30,25 @@ export function RFQCard({ address }: { address: `0x${string}` }) {
   return (
     <Link href={`/rfq/${address}`}>
       <div
-        className={`group relative block overflow-hidden rounded-2xl border p-6 transition-all cursor-pointer
+        className={`group relative block overflow-hidden rounded-2xl border p-6 transition-all duration-300 cursor-pointer hover:-translate-y-1
           ${
             isRevealed
-              ? "border-zamaYellow/30 bg-zamaYellow/[0.04] hover:border-zamaYellow/50 hover:bg-zamaYellow/[0.07] hover:shadow-[0_0_40px_rgba(255,210,8,0.10)]"
-              : "border-white/[0.08] bg-white/[0.025] hover:border-white/[0.16] hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(255,210,8,0.06)]"
+              ? "border-zamaYellow/30 bg-zamaYellow/[0.04] hover:border-zamaYellow/50 hover:bg-zamaYellow/[0.07] hover:shadow-[0_12px_40px_rgba(255,210,8,0.12)]"
+              : status === "open"
+              ? "border-white/[0.08] bg-white/[0.025] hover:border-emerald-400/25 hover:bg-white/[0.05] hover:shadow-[0_12px_30px_rgba(16,185,129,0.08)]"
+              : "border-white/[0.08] bg-white/[0.025] hover:border-white/[0.16] hover:bg-white/[0.05] hover:shadow-[0_12px_30px_rgba(255,210,8,0.06)]"
           }`}
       >
         {/* Left accent bar */}
         <div
           className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full transition-all duration-300
-            ${isRevealed ? "bg-zamaYellow shadow-[0_0_8px_rgba(255,210,8,0.6)]" : "bg-transparent group-hover:bg-zamaYellow/60"}`}
+            ${
+              isRevealed
+                ? "bg-zamaYellow shadow-[0_0_8px_rgba(255,210,8,0.6)]"
+                : status === "open"
+                ? "bg-transparent group-hover:bg-emerald-400/70"
+                : "bg-transparent group-hover:bg-zamaYellow/60"
+            }`}
         />
 
         {isLoading ? (

@@ -79,7 +79,10 @@ export default function CreatePage() {
 
             {/* Success card */}
             <div className="rounded-2xl border border-success/25 bg-success/[0.05] p-10 text-center space-y-5 shadow-[0_0_60px_rgba(16,185,129,0.07)]">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 border border-success/20">
+              <div
+                className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 border border-success/20"
+                style={{ animation: "checkmark-pulse 2.4s ease-in-out infinite" }}
+              >
                 <CheckCircle className="h-8 w-8 text-emerald-400" />
               </div>
               <div>
@@ -175,7 +178,7 @@ export default function CreatePage() {
                     key={t.label}
                     type="button"
                     onClick={() => setDescription(t.value)}
-                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all duration-200 hover:-translate-y-0.5
                       ${
                         description === t.value
                           ? "border-zamaYellow/40 bg-zamaYellow/[0.08] font-semibold text-zamaYellow shadow-[0_0_16px_rgba(255,210,8,0.08)]"
@@ -260,7 +263,7 @@ export default function CreatePage() {
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="e.g. 500 units of industrial bolts, M8 x 30mm"
                         required
-                        className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none transition-all"
+                        className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none focus:shadow-[0_0_20px_rgba(255,210,8,0.08)] transition-all duration-200"
                       />
                     </div>
 

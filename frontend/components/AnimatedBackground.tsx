@@ -1,6 +1,35 @@
+const PACKETS = [
+  { top: "12%", left: "8%", dx: "90px", dy: "-60px", size: 3, duration: "16s", delay: "0s", color: "#FFD208", opacity: 0.5 },
+  { top: "22%", left: "68%", dx: "-70px", dy: "80px", size: 2, duration: "20s", delay: "2s", color: "#60A5FA", opacity: 0.4 },
+  { top: "58%", left: "18%", dx: "60px", dy: "70px", size: 3, duration: "18s", delay: "4s", color: "#60A5FA", opacity: 0.45 },
+  { top: "72%", left: "78%", dx: "-80px", dy: "-50px", size: 2, duration: "22s", delay: "1s", color: "#FFD208", opacity: 0.4 },
+  { top: "38%", left: "42%", dx: "50px", dy: "-90px", size: 2, duration: "24s", delay: "6s", color: "#2F6BFF", opacity: 0.35 },
+  { top: "85%", left: "48%", dx: "-60px", dy: "-70px", size: 3, duration: "19s", delay: "3s", color: "#FFD208", opacity: 0.45 },
+  { top: "8%", left: "82%", dx: "-50px", dy: "90px", size: 2, duration: "21s", delay: "8s", color: "#60A5FA", opacity: 0.4 },
+  { top: "50%", left: "6%", dx: "80px", dy: "40px", size: 2, duration: "17s", delay: "5s", color: "#FFD208", opacity: 0.35 },
+];
+
 export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+      {/* Encrypted data packets — slow drifting particles */}
+      {PACKETS.map((p, i) => {
+        const style = {
+          top: p.top,
+          left: p.left,
+          width: p.size,
+          height: p.size,
+          background: p.color,
+          boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
+          animation: `drift-packet ${p.duration} ease-in-out ${p.delay} infinite`,
+          "--packet-dx": p.dx,
+          "--packet-dy": p.dy,
+          "--packet-opacity": p.opacity,
+        } as React.CSSProperties;
+
+        return <div key={i} className="absolute rounded-full" style={style} />;
+      })}
+
       {/* Deep radial base */}
       <div
         className="absolute inset-0"

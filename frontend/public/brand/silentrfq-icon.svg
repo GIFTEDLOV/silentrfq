@@ -1,0 +1,26 @@
+<svg width="256" height="256" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silentrfq-mark-grad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF8A4C" />
+      <stop offset="100%" stop-color="#FF4D6D" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#0B0B0F" />
+  <path
+    d="M16 3.6 L27.2 9.8 V22.2 L16 28.4 L4.8 22.2 V9.8 Z"
+    stroke="url(#silentrfq-mark-grad)"
+    stroke-width="1.4"
+    fill="url(#silentrfq-mark-grad)"
+    fill-opacity="0.10"
+  />
+  <path
+    d="M13 14.5 V11.6 a3 3 0 0 1 6 0 V14.5"
+    stroke="url(#silentrfq-mark-grad)"
+    stroke-width="1.8"
+    fill="none"
+    stroke-linecap="round"
+  />
+  <rect x="10.5" y="14.5" width="11" height="8.5" rx="2.2" fill="url(#silentrfq-mark-grad)" />
+  <circle cx="16" cy="18.4" r="1.15" fill="#0B0B0F" />
+  <rect x="15.5" y="19" width="1" height="2" fill="#0B0B0F" />
+</svg>

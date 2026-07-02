@@ -56,7 +56,7 @@ export function RFQStatsBar({ addresses }: Props) {
       {stats.map(({ label, value, icon: Icon, accent }) => (
         <div
           key={label}
-          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.045]"
         >
           <div className="flex items-start justify-between">
             <p className="font-display text-3xl font-bold text-white">{value}</p>

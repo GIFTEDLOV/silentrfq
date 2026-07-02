@@ -24,9 +24,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SilentRFQ — Confidential Procurement Infrastructure",
+  title: "SilentRFQ — Confidential RFQs on Zama FHE",
   description:
-    "Encrypted supplier RFQs powered by Zama FHE. Bids stay private. Only the winner is revealed.",
+    "Confidential supplier bidding for RFQs, powered by Zama FHE. Bids stay encrypted while the winner remains publicly verifiable.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

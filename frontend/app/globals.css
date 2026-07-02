@@ -38,3 +38,43 @@
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
+
+@keyframes drift-packet {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  8%   { opacity: var(--packet-opacity, 0.5); }
+  92%  { opacity: var(--packet-opacity, 0.5); }
+  100% { transform: translate(var(--packet-dx, 60px), var(--packet-dy, -80px)); opacity: 0; }
+}
+
+@keyframes scan-glow {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 0% 200%; }
+}
+
+@keyframes checkmark-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.12); opacity: 0.85; }
+}
+
+@keyframes packet-flow-in {
+  0%   { transform: translateX(-14px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes winner-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(255,210,8,0.10); }
+  50%      { box-shadow: 0 0 40px rgba(255,210,8,0.22); }
+}
+
+@keyframes status-dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50%      { opacity: 0.6; box-shadow: 0 0 6px 1px currentColor; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

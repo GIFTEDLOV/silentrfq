@@ -1,6 +1,44 @@
 import Link from "next/link";
-import { CheckCircle, Lock, Shield, Trophy, Zap } from "lucide-react";
+import { CheckCircle, Eye, FileLock2, Lock, ShieldCheck, ShieldOff, Shield, Trophy, Zap } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
+
+const DEMO_RFQ_ADDRESS = "0x6272ea767fa6e6668173F5a4D532885ce1D2502E";
+
+const PROOF_STRIP = [
+  { label: "Sepolia live", color: "#10B981" },
+  { label: "Factory deployed", color: "#FFD208" },
+  { label: "Encrypted bids", color: "#60A5FA" },
+  { label: "Gateway reveal", color: "#60A5FA" },
+  { label: "Public winner", color: "#FFD208" },
+];
+
+const WHY_WE_WIN = [
+  {
+    icon: Lock,
+    title: "Bid amounts stay encrypted",
+    desc: "Every bid is TFHE-ciphertext from the moment it leaves the vendor's browser. No plaintext price ever touches calldata.",
+  },
+  {
+    icon: Eye,
+    title: "Procurement remains auditable",
+    desc: "RFQ metadata, vendor participation, and the final result are all public and independently verifiable on-chain.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Winner is publicly verifiable",
+    desc: "The Zama KMS gateway decrypts only the winning index. Anyone can confirm the result without trusting the buyer.",
+  },
+  {
+    icon: ShieldOff,
+    title: "No offchain bid custody",
+    desc: "There is no backend database, no offchain matcher, no custodian holding bid data. The contract is the only source of truth.",
+  },
+  {
+    icon: FileLock2,
+    title: "Built on Zama FHEVM",
+    desc: "Homomorphic comparison happens directly on encrypted euint64 values using the audited Zama FHEVM primitives.",
+  },
+];
 
 const HOW_IT_WORKS = [
   {
@@ -87,13 +125,16 @@ function HeroVisual() {
         <div className="p-5 space-y-4">
           <div>
             <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-700 mb-2.5">
-              Encrypted Bid Packets
+              encrypted bid packets
             </p>
             <div className="space-y-1.5">
-              {MOCK_BIDS.map((v) => (
+              {MOCK_BIDS.map((v, i) => (
                 <div
                   key={v.id}
                   className="flex items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2.5"
+                  style={{
+                    animation: `packet-flow-in 700ms cubic-bezier(0.16,1,0.3,1) ${i * 250}ms both`,
+                  }}
                 >
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-fheBlue/25 bg-fheBlue/[0.10]">
                     <Lock className="h-2.5 w-2.5 text-fheBlueSoft" />
@@ -103,7 +144,10 @@ function HeroVisual() {
                       <span className="font-mono text-[10px] font-bold text-slate-500">{v.id}</span>
                       <span className="font-mono text-[10px] text-slate-700">{v.addr}</span>
                     </div>
-                    <p className="font-mono text-[10px] text-fheBlueSoft/50 truncate">
+                    <p
+                      className="font-mono text-[10px] text-fheBlueSoft/50 truncate"
+                      style={{ animation: `pulse-glow 3s ease-in-out ${i * 0.4}s infinite` }}
+                    >
                       bid: {v.cipher}
                     </p>
                   </div>
@@ -112,11 +156,20 @@ function HeroVisual() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-fheBlue/25 bg-fheBlue/[0.07] p-4">
-            <div className="flex items-start justify-between gap-4">
+          <div className="relative rounded-xl border border-fheBlue/25 bg-fheBlue/[0.07] p-4 overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, transparent 0%, rgba(96,165,250,0.16) 45%, transparent 90%)",
+                backgroundSize: "100% 300%",
+                animation: "scan-glow 4.5s linear infinite",
+              }}
+            />
+            <div className="relative flex items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-fheBlueSoft mb-1.5">
-                  FHE Comparison Core
+                  FHE comparison core
                 </p>
                 <p className="font-mono text-xs text-slate-300">
                   TFHE.min(euint64, euint64, euint64)
@@ -132,15 +185,21 @@ function HeroVisual() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-zamaYellow/30 bg-zamaYellow/[0.07] p-4">
+          <div
+            className="rounded-xl border border-zamaYellow/30 bg-zamaYellow/[0.07] p-4"
+            style={{ animation: "winner-glow 3.2s ease-in-out infinite" }}
+          >
             <div className="flex items-center justify-between gap-3 mb-2">
               <div>
                 <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-zamaYellow/80 mb-1">
-                  Winner Revealed
+                  winner verified
                 </p>
                 <p className="font-mono text-sm font-bold text-white">0x3BDC...6798</p>
               </div>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_12px_rgba(255,210,8,0.4)]">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_12px_rgba(255,210,8,0.4)]"
+                style={{ animation: "checkmark-pulse 2.4s ease-in-out infinite" }}
+              >
                 <CheckCircle className="h-4 w-4 text-ink" />
               </div>
             </div>
@@ -148,11 +207,36 @@ function HeroVisual() {
               <span className="font-mono text-[9px] text-slate-600">
                 Losing bids: permanently encrypted
               </span>
-              <span className="ml-auto font-mono text-[9px] text-zamaYellow/50">KMS verified</span>
+              <span className="ml-auto font-mono text-[9px] text-zamaYellow/50">live Sepolia</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ProofStrip() {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-7 py-5">
+      {PROOF_STRIP.map((item, i) => (
+        <span
+          key={item.label}
+          className={`flex items-center gap-2.5 text-sm font-semibold text-slate-300 ${
+            i > 0 ? "pl-6 border-l border-white/[0.08]" : ""
+          }`}
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{
+              background: item.color,
+              color: item.color,
+              animation: "status-dot-pulse 2.4s ease-in-out infinite",
+            }}
+          />
+          {item.label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -204,23 +288,23 @@ export default function HomePage() {
             <ScrollReveal delay={160}>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
+                  href="/rfqs"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/[0.15] px-7 py-3.5 text-sm font-bold text-white hover:bg-white/[0.05] hover:border-white/[0.25] transition-all"
+                >
+                  Browse RFQs
+                </Link>
+                <Link
                   href="/create"
                   className="inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-7 py-3.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_30px_rgba(255,210,8,0.35)] transition-all"
                 >
                   <Zap className="h-4 w-4" />
-                  Launch RFQ
+                  Create RFQ
                 </Link>
                 <Link
-                  href="/rfqs"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/[0.15] px-7 py-3.5 text-sm font-bold text-white hover:bg-white/[0.05] hover:border-white/[0.25] transition-all"
-                >
-                  Browse live RFQs
-                </Link>
-                <Link
-                  href="/debug/bid"
+                  href={`/rfq/${DEMO_RFQ_ADDRESS}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-fheBlue/30 px-7 py-3.5 text-sm font-bold text-fheBlueSoft hover:bg-fheBlue/[0.08] hover:border-fheBlue/50 transition-all"
                 >
-                  View demo flow
+                  View verified demo RFQ
                 </Link>
               </div>
             </ScrollReveal>
@@ -242,6 +326,13 @@ export default function HomePage() {
             <HeroVisual />
           </ScrollReveal>
         </div>
+
+        {/* Proof strip */}
+        <ScrollReveal delay={240}>
+          <div className="mt-12">
+            <ProofStrip />
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* Problem */}
@@ -298,6 +389,37 @@ export default function HomePage() {
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 hover:bg-white/[0.05] hover:border-white/[0.12] hover:shadow-[0_0_24px_rgba(255,210,8,0.05)] transition-all h-full">
                 <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-zamaYellow shadow-[0_0_16px_rgba(255,210,8,0.35)]">
                   <span className="font-display text-sm font-bold text-ink">{step}</span>
+                </div>
+                <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
+                <p className="text-xs leading-relaxed text-slate-400">{desc}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Why SilentRFQ wins */}
+      <section className="border-t border-white/[0.06] pt-20">
+        <ScrollReveal>
+          <div className="mb-12">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-zamaYellow">
+              Why SilentRFQ wins
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
+              Confidential by construction, verifiable by design.
+            </h2>
+          </div>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          {WHY_WE_WIN.map(({ icon: Icon, title, desc }, i) => (
+            <ScrollReveal
+              key={title}
+              delay={Math.min(i * 70, 210)}
+              className={i < 3 ? "lg:col-span-2" : "lg:col-span-3"}
+            >
+              <div className="group rounded-2xl border border-zamaYellow/15 bg-gradient-to-b from-zamaYellow/[0.05] to-transparent p-6 hover:border-zamaYellow/35 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(255,210,8,0.08)] transition-all h-full">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-zamaYellow/25 bg-zamaYellow/[0.08] group-hover:bg-zamaYellow/[0.14] transition-colors">
+                  <Icon className="h-4.5 w-4.5 text-zamaYellow" />
                 </div>
                 <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
                 <p className="text-xs leading-relaxed text-slate-400">{desc}</p>

@@ -33,7 +33,7 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
             <Fragment key={label}>
               <div className="flex flex-col items-center" style={{ minWidth: "5.5rem" }}>
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-500
                     ${
                       isCurrent
                         ? "border-zamaYellow bg-zamaYellow text-ink shadow-[0_0_12px_rgba(255,210,8,0.5)]"
@@ -41,6 +41,7 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
                         ? "border-success/40 bg-success/10 text-emerald-400"
                         : "border-white/[0.10] bg-white/[0.03] text-slate-700"
                     }`}
+                  style={isCurrent ? { animation: "checkmark-pulse 2.4s ease-in-out infinite" } : undefined}
                 >
                   {isDone ? "✓" : i + 1}
                 </div>
@@ -60,7 +61,7 @@ export function LifecycleTimeline({ pastDeadline, finalized, winnerRevealed }: P
               </div>
               {i < STEPS.length - 1 && (
                 <div
-                  className={`mt-4 h-0.5 flex-1 transition-colors ${
+                  className={`mt-4 h-0.5 flex-1 transition-colors duration-700 ${
                     i < current ? "bg-success/25" : "bg-white/[0.06]"
                   }`}
                 />

@@ -122,8 +122,14 @@ export default function RFQDetailPage() {
       {/* Verified result banner */}
       {winnerRevealed && (
         <ScrollReveal delay={0}>
-          <div className="rounded-xl border border-zamaYellow/25 bg-zamaYellow/[0.05] px-5 py-3.5 flex items-center gap-4 shadow-[0_0_24px_rgba(255,210,8,0.05)]">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_10px_rgba(255,210,8,0.4)]">
+          <div
+            className="rounded-xl border border-zamaYellow/25 bg-zamaYellow/[0.05] px-5 py-3.5 flex items-center gap-4"
+            style={{ animation: "winner-glow 3.2s ease-in-out infinite" }}
+          >
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_10px_rgba(255,210,8,0.4)]"
+              style={{ animation: "checkmark-pulse 2.4s ease-in-out infinite" }}
+            >
               <ShieldCheck className="h-3.5 w-3.5 text-ink" />
             </div>
             <div className="flex-1 min-w-0">
@@ -222,10 +228,16 @@ export default function RFQDetailPage() {
           {/* Winner card */}
           {winnerRevealed && winnerAddr && (
             <ScrollReveal delay={200}>
-              <div className="rounded-2xl border border-zamaYellow/40 bg-zamaYellow/[0.06] p-6 shadow-[0_0_50px_rgba(255,210,8,0.08)]">
+              <div
+                className="rounded-2xl border border-zamaYellow/40 bg-zamaYellow/[0.06] p-6"
+                style={{ animation: "winner-glow 3.2s ease-in-out infinite" }}
+              >
                 <div className="mb-5 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_24px_rgba(255,210,8,0.45)]">
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-zamaYellow shadow-[0_0_24px_rgba(255,210,8,0.45)]"
+                      style={{ animation: "checkmark-pulse 2.4s ease-in-out infinite" }}
+                    >
                       <Trophy className="h-6 w-6 text-ink" />
                     </div>
                     <div>

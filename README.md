@@ -1,146 +1,66 @@
 # SilentRFQ
 
-**Confidential procurement bidding on Zama FHEVM — Zama Season 3 Builder Track**
+Confidential supplier bidding for RFQs, powered by Zama FHE.
+
+**Zama Season 3 Builder Track**
+
+Quick links:
+- Live app: [silentrfq.vercel.app](https://silentrfq.vercel.app)
+- GitHub: [github.com/GIFTEDLOV/silentrfq](https://github.com/GIFTEDLOV/silentrfq)
+- Network: Sepolia
+- Factory: `0xE2E283304863dF8C800094e39a8928D84BF330ec`
 
 ---
 
-## What is SilentRFQ?
+![SilentRFQ home page — hero, animated FHE visual, proof strip](docs/screenshots/home.png)
 
-SilentRFQ is a confidential Request for Quotation (RFQ) protocol built on Zama's Fully Homomorphic Encryption Virtual Machine (FHEVM). It allows a buyer to create an RFQ on-chain and collect encrypted price quotes from competing vendors. The smart contract compares all submitted bids homomorphically — without ever decrypting them — and identifies the winning vendor. Losing bid amounts remain permanently private, even after the auction closes.
-
----
-
-## The Problem: Public Blockchains Leak Supplier Quote Data
-
-Traditional procurement involves sealed bids for a reason: suppliers compete more honestly when they cannot see each other's quotes. Putting an RFQ on a public blockchain reverses this entirely.
-
-On a standard EVM chain, every transaction input is visible. If vendors submit bid amounts as calldata or store them in contract state, any competitor can:
-
-- Read a rival's submitted price before the deadline and undercut it by one unit.
-- Build a long-term price database on a supplier's quoting behaviour.
-- Identify which suppliers are cheapest for specific categories, then approach them directly to negotiate around the buyer.
-
-This is not a hypothetical risk. It is the default behaviour of every public EVM chain. A procurement dApp without encryption does not preserve the confidentiality model that sealed bidding exists to provide.
+<table>
+  <tr>
+    <td><img src="docs/screenshots/rfqs.png" alt="RFQ dashboard" /></td>
+    <td><img src="docs/screenshots/create.png" alt="Create RFQ" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/rfq-detail.png" alt="RFQ detail with lifecycle timeline" /></td>
+    <td><img src="docs/screenshots/winner-revealed.png" alt="Winner revealed, verified via Zama KMS gateway" /></td>
+  </tr>
+</table>
 
 ---
 
-## The Solution: Homomorphic Encryption with Zama FHEVM
+## 1. Problem
 
-Zama FHEVM allows smart contracts to operate on encrypted data without ever decrypting it. Vendors encrypt their bid amounts locally using the Zama SDK before submitting. The ciphertext is sent on-chain, and the contract performs all comparisons inside the encryption layer.
+Sealed-bid procurement exists so suppliers compete on price without seeing each other's quotes. Putting an RFQ on a public blockchain destroys that guarantee by default.
 
-The key properties this enables for SilentRFQ:
+On a standard EVM chain, every bid amount lands in calldata or contract storage — readable by anyone. A competitor can read a rival's price before the deadline and undercut it by one unit, build a long-term pricing database on every supplier they transact with, or identify the cheapest vendor for a category and approach them directly to cut the buyer out. This isn't a hypothetical exploit; it's the default behavior of every public EVM chain. A procurement dApp without encryption does not preserve the confidentiality model that sealed bidding exists to provide.
 
-- A vendor's submitted bid amount is **never visible** to any other party at any point.
-- The contract can determine which bid is lowest **without knowing what any individual bid is**.
-- After finalization, the winning vendor index is **publicly decryptable** via the Zama gateway — anyone can submit a valid KMS-signed proof, but nobody can manually choose the winner. The proof is verified on-chain by `FHE.checkSignatures`.
-- The winning bid amount stays **buyer-private** — only the buyer receives `FHE.allow` access via the Zama SDK.
-- Encrypted ciphertexts and transaction data are public on-chain, but plaintext bid amounts remain private because decrypt permissions (`FHE.allow`) are not granted for losing bids. Without that permission, the ciphertext is unreadable.
+## 2. Solution
 
-This is not obfuscation or off-chain privacy. It is cryptographic privacy enforced by the protocol itself.
+SilentRFQ runs the entire bid comparison inside Zama's Fully Homomorphic Encryption Virtual Machine (FHEVM). Vendors encrypt their bid amount locally in the browser before it ever touches the network. The smart contract compares encrypted bids against each other and tracks the running best bid — without decrypting a single value. After the deadline, the buyer finalizes the RFQ and only the **winning vendor index** is made publicly decryptable via the Zama KMS gateway. Every losing bid amount stays encrypted on-chain permanently.
 
----
+## 3. Why FHE matters
 
-## What is Public vs. Private
+Homomorphic encryption lets the contract compute on ciphertexts directly, so there's no window where a plaintext price exists on-chain — not even briefly, and not even to the contract itself.
 
-### Public (visible on-chain to anyone)
+- A vendor's bid amount is **never visible** to any other party, at any point, including during the live bidding period.
+- The contract determines the lowest bid **without knowing what any individual bid is**, using `FHE.lt` for encrypted comparison and `FHE.select` as an encrypted conditional.
+- The winning vendor index becomes **publicly decryptable** only after finalization, via `FHE.makePubliclyDecryptable`. Anyone can submit the resulting KMS-signed proof — nobody, including the buyer, can hand-pick the winner.
+- The winning bid amount stays **buyer-private** — only the buyer receives `FHE.allow` access after `finalize()`.
+- Losing bid ciphertexts remain on-chain forever, but unreadable: no `FHE.allow` grant is ever issued for them, so there is no key that unlocks them.
 
-| Data | Where |
-|---|---|
-| Buyer address | Contract state |
-| RFQ description | Contract state |
-| Bid deadline (Unix timestamp) | Contract state |
-| Vendor addresses, in submission order | `vendors[]` array |
-| Number of bids submitted | `vendorCount()` |
-| Final winner address, after reveal | `winnerAddress()` after `callbackRevealWinner` |
-| Whether the RFQ has been finalized | `finalized` flag |
+This is cryptographic privacy enforced by the protocol, not obfuscation or an off-chain trust assumption.
 
-### Private (encrypted, never exposed)
+## 4. Features
 
-| Data | Why it stays private |
-|---|---|
-| Individual bid amounts | Encrypted as `euint64`; only the encrypted handle is stored |
-| Losing bid amounts | No `FHE.allow` is ever granted for losing bids |
-| Winning bid amount | `_bestBid` is `euint64`; only the buyer receives `FHE.allow` access after `finalize()` |
-| Which vendor is currently winning during the bidding period | `_bestVendorIndex` is encrypted and unreadable during the bid period |
-| Bid ordering and ranking | The FHE comparison result is itself encrypted; no plaintext ranking is ever produced |
+- Buyer creates an RFQ with a description and bid deadline via `SilentRFQFactory`.
+- Vendors submit TFHE-encrypted bid amounts (`euint64`) using the Zama SDK — no plaintext ever leaves the browser.
+- The contract homomorphically tracks the best bid and best vendor index across every submission.
+- Deadline enforcement is on-chain and non-negotiable.
+- Buyer finalizes after the deadline; the winning index becomes publicly decryptable.
+- Anyone can submit the Zama KMS proof to permissionlessly reveal the winner — no trusted intermediary, no buyer gatekeeping.
+- Losing bid amounts remain permanently encrypted, with no decrypt path ever granted.
+- Full Sepolia-verified live demo with real encrypted bids, real finalize, real gateway reveal.
 
----
-
-## How Encrypted Bidding Works
-
-### 1. Buyer deploys the contract
-
-The buyer deploys `SilentRFQ` with a plain-text description and a Unix timestamp deadline. Their address is recorded as the `buyer`. No bid amounts exist yet.
-
-### 2. Vendors submit encrypted bids
-
-Each vendor uses the Zama SDK to encrypt their bid amount locally into a `euint64` ciphertext along with a validity proof. They call `submitBid(externalEuint64 inputBid, bytes inputProof)`.
-
-The contract verifies the proof with `FHE.fromExternal(inputBid, inputProof)` and runs the following logic entirely inside the encryption layer:
-
-**First bid (plaintext branch, detected via `vendors.length == 0` before the push):**
-
-```solidity
-_bestBid = encryptedBid;
-_bestVendorIndex = FHE.asEuint64(uint64(newIndex));
-```
-
-The first bid is stored directly. No FHE comparison is needed because there is no prior best to compare against. First-bid detection uses the plaintext `vendors.length` — not `FHE.isInitialized` — to keep the branch entirely outside the encryption layer.
-
-**Subsequent bids (FHE comparison branch):**
-
-```solidity
-ebool isLower = FHE.lt(encryptedBid, _bestBid);
-_bestBid = FHE.select(isLower, encryptedBid, _bestBid);
-_bestVendorIndex = FHE.select(isLower, FHE.asEuint64(uint64(newIndex)), _bestVendorIndex);
-```
-
-`FHE.lt` compares two encrypted values and returns an encrypted boolean — the comparison result itself is never revealed. `FHE.select` acts as an encrypted conditional: it picks the lower bid and the corresponding vendor index using the encrypted boolean, without ever decrypting either candidate.
-
-**Tie policy:** `FHE.lt` is strictly less-than. If two vendors submit equal amounts, `isLower` evaluates to false and `FHE.select` leaves `_bestBid` and `_bestVendorIndex` unchanged. The earliest bid wins any tie.
-
-After every bid, `FHE.allowThis` is called on both `_bestBid` and `_bestVendorIndex` so the contract retains access to the updated ciphertexts across future transactions.
-
-### 3. Buyer finalizes after the deadline
-
-After the deadline passes, the buyer calls `finalize()`. This:
-
-- Verifies the caller is the buyer, the deadline has passed, and at least one bid exists.
-- Sets `finalized = true`.
-- Calls `FHE.makePubliclyDecryptable(_bestVendorIndex)` — registers the winning vendor index with the Zama ACL so anyone with a valid KMS-signed proof can reveal it trustlessly via `callbackRevealWinner`.
-- Calls `FHE.allow(_bestBid, buyer)` — the winning bid amount stays private, readable only by the buyer.
-
-Losing bid ciphertexts remain on-chain but permanently unreadable without an `FHE.allow` grant — which is never issued for losing bids.
-
-### 4. Winner is revealed via public decryption callback
-
-After `finalize()`, anyone queries the Zama relayer with `_bestVendorIndex` handle and receives `{ decrypted_value, signatures }` — the ABI-encoded winner index and KMS signatures. They then call:
-
-```solidity
-callbackRevealWinner(bytes32[] handlesList, bytes abiEncodedCleartexts, bytes decryptionProof)
-```
-
-This function:
-
-1. Verifies `handlesList` contains exactly `_bestVendorIndex` for this contract — prevents substituting a proof for a different ciphertext.
-2. Calls `FHE.checkSignatures(handlesList, abiEncodedCleartexts, decryptionProof)` — verifies KMS signatures on-chain. Reverts if invalid. No trust in the caller is needed.
-3. Decodes `uint256 index = abi.decode(abiEncodedCleartexts, (uint256))` and stores it as `revealedWinnerIndex`.
-4. Emits `WinnerRevealed`. `winnerAddress()` returns the vendor from `vendors[revealedWinnerIndex]`.
-
-**This is the primary Sepolia settlement path.** Winner reveal requires no buyer action and no trusted third party — only a valid KMS-signed proof from the Zama gateway.
-
-The `decryptionProof` byte layout (from `FHE.sol`):
-```
-byte[0]            = numSigners (uint8)
-bytes[1..65]       = signature_0 (65 bytes, ECDSA)
-bytes[66..130]     = signature_1 (if threshold > 1)
-...
-bytes[trailing]    = extraData (0x00 for v0)
-```
-
----
-
-## Architecture
+## 5. Architecture
 
 SilentRFQ uses a factory pattern: buyers interact with `SilentRFQFactory` to create RFQs, and each RFQ lives in its own `SilentRFQ` contract.
 
@@ -153,233 +73,163 @@ Buyer
             ├─▶ indexes address in _allRFQs and _rfqsByBuyer[buyer]
             └─▶ emits RFQCreated(rfq, buyer, description, deadline)
 
-Frontend discovery
-  └─▶ factory.getRFQs()             — all RFQs ever created
-  └─▶ factory.getRFQsByBuyer(addr)  — buyer's own RFQs
-  └─▶ factory.rfqCount()            — total count
+Vendor bidding (per SilentRFQ contract)
+  └─▶ submitBid(externalEuint64 bid, bytes proof)
+            ├─▶ first bid  → stored directly as _bestBid / _bestVendorIndex
+            └─▶ later bids → FHE.lt + FHE.select (encrypted comparison, no decryption)
+
+Finalize + reveal
+  └─▶ finalize()                         — buyer only, after deadline
+            └─▶ FHE.makePubliclyDecryptable(_bestVendorIndex)
+  └─▶ callbackRevealWinner(handles, cleartexts, proof)  — anyone, after finalize
+            └─▶ FHE.checkSignatures(...) verifies the Zama KMS proof on-chain
+            └─▶ winnerAddress() = vendors[revealedWinnerIndex]
 ```
 
 Each `SilentRFQ` contract is independent and self-contained. The factory is stateless with respect to bidding — it only tracks addresses.
 
----
-
-## Project Structure
-
 ```
 silentrfq/
 ├── contracts/
-│   ├── SilentRFQFactory.sol # App entry point — deploys and indexes SilentRFQ contracts
-│   ├── SilentRFQ.sol        # Per-RFQ contract — confidential FHE bidding logic
-│   └── FHECounter.sol       # Zama template example (unchanged)
+│   ├── SilentRFQFactory.sol   # Entry point — deploys and indexes SilentRFQ contracts
+│   ├── SilentRFQ.sol          # Per-RFQ contract — confidential FHE bidding logic
+│   └── FHECounter.sol         # Zama template example (unchanged)
 ├── test/
-│   ├── SilentRFQFactory.ts  # Factory test suite (11 tests)
-│   ├── SilentRFQ.ts         # SilentRFQ test suite (29 tests)
-│   └── FHECounter.ts        # Template example tests (unchanged)
+│   ├── SilentRFQFactory.ts    # Factory test suite
+│   ├── SilentRFQ.ts           # SilentRFQ test suite
+│   └── FHECounter.ts          # Template example tests (unchanged)
 ├── deploy/
-│   └── deploy.ts            # Template deploy script
+│   └── deploy.ts
+├── frontend/                  # Next.js app — wallet connect, RFQ dashboard, bid/finalize/reveal
 ├── hardhat.config.ts
 └── package.json
 ```
 
----
+## 6. Live verified demo
 
-## How to Run
+Everything below is live and independently verifiable on Sepolia — no mocked data, no simulated decryption.
 
-### Prerequisites
+| | Address |
+|---|---|
+| **Factory** | `0xE2E283304863dF8C800094e39a8928D84BF330ec` |
+| **Completed RFQ** | `0x6272ea767fa6e6668173F5a4D532885ce1D2502E` |
+| **Winner** | `0x3BDC14A4A6E4E11668B43004B52049B3167e6798` |
 
-- Node.js 20 or higher
-- npm
+Open the completed RFQ on the live app or on Sepolia Etherscan and confirm: the RFQ was finalized, `callbackRevealWinner` succeeded with a real KMS-signed proof, and the winner address matches `winnerAddress()` on-chain.
 
-### Install dependencies
+## 7. Demo flow
+
+1. **Create** — Connect a Sepolia wallet, go to `/create`, submit a description and deadline. `SilentRFQFactory.createRFQ` deploys a new `SilentRFQ` contract.
+2. **Bid** — From a vendor wallet, open the RFQ and submit an encrypted bid. The Zama SDK encrypts the amount client-side into a `euint64` ciphertext with a validity proof before it's sent.
+3. **Compare (automatic)** — Each new bid is homomorphically compared against the current best bid on-chain. No plaintext value exists at any point.
+4. **Finalize** — After the deadline, the buyer calls `finalize()`. This registers the winning index for public decryption and grants the buyer private access to the winning bid amount.
+5. **Reveal** — Anyone submits the Zama KMS proof via `callbackRevealWinner`. The winner address becomes public. Every losing bid stays encrypted, permanently.
+
+## 8. Local development
+
+**Contracts**
 
 ```bash
 npm install
-```
-
-### Compile contracts
-
-```bash
 npm run compile
-```
-
-### Run all tests
-
-```bash
 npm run test
 ```
 
----
-
-## Test Status
-
-```
-42 passing
- 1 pending  ← Sepolia-only template test, correctly skipped on local
-```
-
-**SilentRFQ (29 tests):**
-- Deployment: zero-buyer rejection (`InvalidBuyer`), past/equal-to-now deadline rejection (`InvalidDeadline`), correct initial state
-- submitBid: deadline enforcement, duplicate prevention, first-bid path, FHE comparison correctness (lower/higher/equal), three-vendor selection, vendor ordering
-- finalize: non-buyer, pre-deadline, no-bids, success, exact-boundary, double-finalize
-- callbackRevealWinner: not-finalized, already-revealed, empty handles, length > 1, wrong handle, tampered proof, tampered cleartexts, valid proof success, permissionless caller, full three-vendor gateway flow
-
-**SilentRFQFactory (11 tests):**
-- createRFQ: buyer set correctly, address returned, RFQCreated event, invalid deadline propagation
-- getRFQs: all RFQs across buyers, empty before first create
-- getRFQsByBuyer: buyer-scoped results, empty for buyer with no RFQs
-- rfqCount: zero initial, increments correctly
-
----
-
-## Frontend
-
-The frontend is a Next.js app in the `frontend/` directory. It supports the full Sepolia flow: wallet connect, RFQ creation, encrypted bid submission via the Zama SDK, buyer finalization, and gateway reveal of the winner address.
-
-### Setup
-
-**1. Start a local Hardhat node (separate terminal)**
+**Frontend, against a local Hardhat node**
 
 ```bash
+# terminal 1
 npx hardhat node
-```
 
-**2. Deploy SilentRFQFactory to the local node**
-
-```bash
+# terminal 2
 npx hardhat run scripts/deployFactory.ts --network localhost
-```
+# copy the printed NEXT_PUBLIC_FACTORY_ADDRESS
 
-Copy the printed `NEXT_PUBLIC_FACTORY_ADDRESS=0x...` line.
-
-**3. Configure the frontend**
-
-```bash
 cd frontend
-cp .env.local.example .env.local
-# Paste the factory address into .env.local
-```
-
-**4. Install frontend dependencies and start the dev server**
-
-```bash
 npm install
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Pages
+**Frontend, against Sepolia**
 
-| Route | Description |
+Point the env vars below at the deployed factory and Sepolia chain ID instead, then `npm run dev` or `npm run build && npm run start`.
+
+## 9. Environment variables
+
+Copy `.env.local.example` to `frontend/.env.local` (or set these in Vercel project settings for production):
+
+| Variable | Description |
 |---|---|
-| `/` | Home - wallet connect, links to create/browse |
-| `/create` | Create a new RFQ (description + deadline) |
-| `/rfqs` | List all RFQs from the factory |
-| `/rfq/[address]` | RFQ detail - encrypted bid submit, finalize, gateway reveal |
-| `/debug/bid` | Debug page for encrypted bid submission |
-| `/debug/reveal` | Debug page for gateway reveal |
+| `NEXT_PUBLIC_FACTORY_ADDRESS` | Deployed `SilentRFQFactory` address for the target network |
+| `NEXT_PUBLIC_CHAIN_ID` | `31337` for a local Hardhat node, `11155111` for Sepolia |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | From [cloud.walletconnect.com](https://cloud.walletconnect.com) — not required for MetaMask/injected wallets |
 
-### Build
+## 10. Testing
 
-```bash
-cd frontend
-npm run build
+```
+42 passing
+ 1 pending  ← Sepolia-only template test, correctly skipped locally
 ```
 
----
+**SilentRFQ:**
+- Deployment: zero-buyer rejection, past/equal-to-now deadline rejection, correct initial state
+- `submitBid`: deadline enforcement, duplicate prevention, first-bid path, FHE comparison correctness (lower/higher/equal), three-vendor selection, vendor ordering
+- `finalize`: non-buyer, pre-deadline, no-bids, success, exact-boundary, double-finalize
+- `callbackRevealWinner`: not-finalized, already-revealed, empty handles, wrong handle, tampered proof, tampered cleartexts, valid proof success, permissionless caller, full three-vendor gateway flow
 
-## Build Roadmap
+**SilentRFQFactory:**
+- `createRFQ`: buyer set correctly, address returned, `RFQCreated` event, invalid deadline propagation
+- `getRFQs` / `getRFQsByBuyer`: correct scoping, empty-state handling
+- `rfqCount`: zero initial, increments correctly
 
-| Phase | Status |
-|---|---|
-| Contract proof (`SilentRFQ.sol`) | Complete |
-| Factory contract (`SilentRFQFactory.sol`) | Complete |
-| TypeScript test suite | Complete |
-| Local FHEVM mock testing | Complete |
-| Zama public decryption gateway callback (`callbackRevealWinner`) | Complete |
-| Sepolia deployment | Complete (tested) |
-| Minimal frontend shell (Phase 3A - no encrypted bids) | Complete |
-| Encrypted bid submission frontend | Complete (tested on Sepolia) |
-| Gateway reveal frontend | Complete (tested on Sepolia) |
-| Demo video | Planned |
+Run it yourself: `npm run test`.
 
----
+## 11. Tech stack
 
-## Tech Stack
-
-- [Zama FHEVM](https://docs.zama.ai/fhevm) — fully homomorphic encryption for EVM
-- [Hardhat](https://hardhat.org/) — development and testing framework
-- [`@fhevm/solidity`](https://www.npmjs.com/package/@fhevm/solidity) v0.11.x — FHE Solidity library
+**Contracts**
+- [Zama FHEVM](https://docs.zama.ai/fhevm) — fully homomorphic encryption for the EVM
+- [`@fhevm/solidity`](https://www.npmjs.com/package/@fhevm/solidity) — FHE Solidity library
 - [`@fhevm/hardhat-plugin`](https://www.npmjs.com/package/@fhevm/hardhat-plugin) — mock FHEVM environment for local testing
-- TypeScript — test suite
-- Solidity 0.8.27 — contract language
+- Solidity 0.8.27, Hardhat, TypeScript test suite
+
+**Frontend**
+- Next.js (App Router) + TypeScript
+- [Zama Relayer SDK](https://www.npmjs.com/package/@zama-fhe/relayer-sdk) — client-side bid encryption
+- wagmi + viem + RainbowKit — wallet connection and contract calls
+- Tailwind CSS — dark, motion-driven UI
+
+## 12. Demo video script
+
+1. **Hook (0:00–0:10)** — "Every public-chain RFQ leaks supplier pricing to competitors. SilentRFQ fixes that with real homomorphic encryption — not obfuscation."
+2. **The problem (0:10–0:25)** — Show a bid amount sitting in plaintext calldata on a standard EVM explorer. Point out any wallet can read it before the deadline.
+3. **Create an RFQ (0:25–0:45)** — Live on Sepolia: connect wallet, `/create`, submit description + deadline, show the deployed contract address.
+4. **Submit an encrypted bid (0:45–1:15)** — Switch to a vendor wallet, submit a bid, and show the network tab / calldata — only a ciphertext, never a number.
+5. **Explain the FHE comparison (1:15–1:40)** — Walk through `FHE.lt` + `FHE.select` in `SilentRFQ.sol`: the contract picks the lower bid without ever seeing either value in plaintext.
+6. **Finalize + reveal (1:40–2:10)** — Call `finalize()` after the deadline, then submit the KMS proof via `callbackRevealWinner`. Show the winner address appearing on-chain, live.
+7. **Close (2:10–2:30)** — Open the RFQ detail page's privacy panel: losing bids stay encrypted forever. "This is Zama FHEVM doing exactly what it's for — confidential computation, public proof."
+
+## 13. X article / announcement points
+
+- Sealed-bid procurement, but the seal is cryptographic — built on Zama FHEVM, not a promise.
+- Vendors submit `euint64` ciphertexts. The contract compares bids with `FHE.lt` / `FHE.select`. No plaintext bid amount ever exists on-chain, not even transiently.
+- The winner is revealed through a permissionless, KMS-signed proof — anyone can trigger the reveal, nobody can pick the winner.
+- Losing bids aren't "hidden" by convention — there is no `FHE.allow` grant for them, so there is no key that unlocks them, ever.
+- Live and verifiable on Sepolia today: real factory, real encrypted bids, real gateway reveal. Addresses in the README, not screenshots.
+- Built for the Zama Season 3 Builder Track: an audited-pattern FHE contract, a full test suite, and a frontend built to feel like a real product — not a slide deck.
 
 ---
 
-## Template Base
+## Template base
 
-This project was bootstrapped from the [Zama FHEVM Hardhat Template](https://github.com/zama-ai/fhevm-hardhat-template). The original template quick-start instructions and FHECounter example are preserved below.
-
----
-
-## Original Template: Quick Start
-
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
-
-### Installation
-
-1. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-2. **Set up environment variables**
-
-   ```bash
-   npx hardhat vars set MNEMONIC
-   npx hardhat vars set INFURA_API_KEY
-   npx hardhat vars set ETHERSCAN_API_KEY  # optional
-   ```
-
-3. **Deploy to local network**
-
-   ```bash
-   npx hardhat node
-   npx hardhat deploy --network localhost
-   ```
-
-4. **Deploy to Sepolia Testnet**
-
-   ```bash
-   npx hardhat deploy --network sepolia
-   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
-   ```
-
-## Available Scripts
-
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
-
-## Documentation
-
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
+This project was bootstrapped from the [Zama FHEVM Hardhat Template](https://github.com/zama-ai/fhevm-hardhat-template).
 
 ## License
 
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
+BSD-3-Clause-Clear. See [LICENSE](LICENSE).
 
 ## Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/zama-ai/fhevm/issues)
-- **Documentation**: [FHEVM Docs](https://docs.zama.ai)
-- **Community**: [Zama Discord](https://discord.gg/zama)
+- [FHEVM Documentation](https://docs.zama.ai/fhevm)
+- [Zama Discord](https://discord.gg/zama)
