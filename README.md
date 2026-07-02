@@ -5,7 +5,7 @@ Confidential supplier bidding for RFQs, powered by Zama FHE.
 **Zama Season 3 Builder Track**
 
 Quick links:
-- Live app: [silentrfq.vercel.app](https://silentrfq.vercel.app)
+- Live app: [silentrfq.xyz](https://silentrfq.xyz)
 - GitHub: [github.com/GIFTEDLOV/silentrfq](https://github.com/GIFTEDLOV/silentrfq)
 - Network: Sepolia
 - Factory: `0xE2E283304863dF8C800094e39a8928D84BF330ec`
