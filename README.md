@@ -113,7 +113,7 @@ Everything below is live and independently verifiable on Sepolia — no mocked d
 |---|---|
 | **Factory** | `0xE2E283304863dF8C800094e39a8928D84BF330ec` |
 | **Completed RFQ** | `0x6272ea767fa6e6668173F5a4D532885ce1D2502E` |
-| **Winner** | `0x3BDC14A4A6E4E11668B43004B52049B3167e6798` |
+| **Winner** | `0x3BDCd4A4A6E4E11668b43004B52049b3167e6798` |
 
 Open the completed RFQ on the live app or on Sepolia Etherscan and confirm: the RFQ was finalized, `callbackRevealWinner` succeeded with a real KMS-signed proof, and the winner address matches `winnerAddress()` on-chain.
 
