@@ -12,6 +12,14 @@ Quick links:
 
 Shared links carry a custom Open Graph preview image, so posts on X/LinkedIn render a clean SilentRFQ card instead of a bare URL.
 
+## Submission links
+
+- Live app: [silentrfq.xyz](https://silentrfq.xyz)
+- Demo video: [youtu.be/ZNAHHbf7l-A](https://youtu.be/ZNAHHbf7l-A?si=q7D6Eycv1mNW0xXm)
+- X article: [x.com/0x_emory/status/2072919859415875685](https://x.com/0x_emory/status/2072919859415875685)
+- Smart contract code base: [github.com/GIFTEDLOV/silentrfq](https://github.com/GIFTEDLOV/silentrfq)
+- Frontend code base: [github.com/GIFTEDLOV/silentrfq](https://github.com/GIFTEDLOV/silentrfq) (same repository — contracts and frontend live side by side)
+
 ---
 
 ![SilentRFQ home page — hero, animated FHE visual, proof strip](docs/screenshots/home.png)
@@ -66,6 +74,7 @@ a possible future extension — not implemented in v1.)
 - Anyone can submit the Zama KMS proof to permissionlessly reveal the winner — no trusted intermediary, no buyer gatekeeping.
 - Losing bid amounts remain permanently encrypted, with no decrypt path ever granted.
 - Every RFQ page includes a Live Verification panel — one-click copy and Sepolia Etherscan links for the factory, RFQ, and winner addresses, no wallet required.
+- **Judge demo guide** — the homepage includes a five-step "Try the live demo" path that takes judges from the verified RFQ to the Live Verification panel.
 - Full Sepolia-verified live demo with real encrypted bids, real finalize, real gateway reveal.
 
 ## 5. Architecture
@@ -208,6 +217,11 @@ Run it yourself: `npm run test`.
 - wagmi + viem + RainbowKit — wallet connection and contract calls
 - Tailwind CSS — dark, motion-driven UI
 
+## Demo video
+
+Final demo video:
+[youtu.be/ZNAHHbf7l-A](https://youtu.be/ZNAHHbf7l-A?si=q7D6Eycv1mNW0xXm)
+
 ## 12. Demo video script
 
 1. **Hook (0:00–0:10)** — "Every public-chain RFQ leaks supplier pricing to competitors. SilentRFQ fixes that with real homomorphic encryption — not obfuscation."
@@ -226,6 +240,11 @@ Run it yourself: `npm run test`.
 - Losing bids aren't "hidden" by convention — there is no `FHE.allow` grant for them, so there is no key that unlocks them, ever.
 - Live and verifiable on Sepolia today: real factory, real encrypted bids, real gateway reveal. Addresses in the README, not screenshots.
 - Built for the Zama Season 3 Builder Track: an audited-pattern FHE contract, a full test suite, and a frontend built to feel like a real product — not a slide deck.
+
+## Article
+
+Launch article:
+[x.com/0x_emory/status/2072919859415875685](https://x.com/0x_emory/status/2072919859415875685)
 
 ---
 
