@@ -94,7 +94,7 @@ const HOW_IT_WORKS = [
   {
     step: "01",
     title: "Buyer creates RFQ",
-    desc: "Post a procurement request with a description and deadline. Contract is deployed publicly — bid logic is private.",
+    desc: "Post a structured procurement request — goods, quantity, unit, currency, and requirements. Contract is deployed publicly — bid logic is private.",
   },
   {
     step: "02",

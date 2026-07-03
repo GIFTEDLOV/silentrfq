@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SilentRFQ OG Image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1200px;
+    height: 630px;
+    background: #01030A;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  .display { font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  .canvas { position: relative; width: 1200px; height: 630px; overflow: hidden; }
+
+  .bg-base {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 90% 80% at 25% 0%, #010A14 0%, #010205 45%, #010204 100%);
+  }
+  .bg-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .orb { position: absolute; border-radius: 9999px; filter: blur(110px); }
+  .orb-orange { width: 560px; height: 560px; top: -200px; left: -160px; background: #FF6B3D; opacity: 0.12; }
+  .orb-blue { width: 620px; height: 620px; bottom: -260px; right: -160px; background: #2F6BFF; opacity: 0.12; }
+
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 120% 120% at 50% 50%, transparent 40%, rgba(1,3,7,0.78) 100%);
+  }
+
+  .content {
+    position: relative; z-index: 5;
+    width: 1200px; height: 630px;
+    display: flex; align-items: center;
+    padding: 0 64px;
+  }
+
+  .left { width: 610px; flex-shrink: 0; }
+  .right { width: 430px; margin-left: 48px; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #E4E7EC;
+    margin-bottom: 26px;
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 999px; background: #FFD208; }
+
+  .brand-row { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; }
+  .brand-row .wordmark { font-size: 60px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em; line-height: 1; }
+
+  .subtitle { font-size: 25px; font-weight: 600; line-height: 1.32; color: #DCE1E8; margin-bottom: 16px; }
+  .tagline { font-size: 18px; font-weight: 500; color: #FFD208; letter-spacing: 0.01em; margin-bottom: 26px; }
+
+  .url { font-size: 15px; color: #4B5563; }
+
+  /* Right visual card */
+  .card {
+    position: relative;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.025);
+    overflow: hidden;
+    box-shadow: 0 30px 90px rgba(0,0,0,0.45);
+  }
+  .card-glow {
+    position: absolute; inset: -50px;
+    background: radial-gradient(ellipse 75% 65% at 50% 40%, rgba(255,138,76,0.16) 0%, rgba(47,107,255,0.10) 55%, transparent 100%);
+    filter: blur(8px);
+    z-index: -1;
+  }
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.02);
+  }
+  .traffic { display: flex; gap: 6px; }
+  .traffic span { width: 9px; height: 9px; border-radius: 999px; }
+  .traffic span:nth-child(1) { background: rgba(255,255,255,0.14); }
+  .traffic span:nth-child(2) { background: rgba(255,255,255,0.10); }
+  .traffic span:nth-child(3) { background: rgba(255,255,255,0.06); }
+  .card-header .path { margin-left: 4px; flex: 1; font-size: 12px; color: #6B7280; }
+  .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #34D399; font-weight: 600; }
+  .live-badge .dot { width: 6px; height: 6px; border-radius: 999px; background: #34D399; }
+
+  .card-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5B6472; margin-bottom: 10px; }
+
+  .bid-row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.025);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .lock-icon {
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 7px;
+    border: 1px solid rgba(96,165,250,0.35);
+    background: rgba(96,165,250,0.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bid-meta { flex: 1; min-width: 0; }
+  .bid-meta .top-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #9AA3B2; margin-bottom: 3px; }
+  .bid-meta .top-row .addr { color: #4B5563; font-weight: 500; }
+  .bid-meta .cipher { font-size: 11px; color: rgba(96,165,250,0.55); }
+
+  .fhe-core {
+    border: 1px solid rgba(47,107,255,0.30);
+    background: rgba(47,107,255,0.09);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .fhe-core .fhe-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #93B7FE; margin-bottom: 7px; }
+  .fhe-core .fhe-code { font-size: 15px; color: #E5E9F0; margin-bottom: 5px; }
+  .fhe-core .fhe-sub { font-size: 11px; color: #55607A; }
+
+  .winner-box {
+    border: 1px solid rgba(255,210,8,0.35);
+    background: rgba(255,210,8,0.08);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  }
+  .winner-box .wl { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,210,8,0.75); margin-bottom: 5px; }
+  .winner-box .addr { font-size: 19px; font-weight: 700; color: #FFFFFF; }
+  .check-badge {
+    width: 34px; height: 34px; border-radius: 999px; flex-shrink: 0;
+    background: #FFD208;
+    box-shadow: 0 0 24px rgba(255,210,8,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="bg-base"></div>
+    <div class="bg-grid"></div>
+    <div class="orb orb-orange"></div>
+    <div class="orb orb-blue"></div>
+    <div class="vignette"></div>
+
+    <div class="content">
+      <div class="left">
+        <div class="eyebrow"><span class="dot"></span>ZAMA FHEVM &nbsp;&middot;&nbsp; CONFIDENTIAL PROCUREMENT</div>
+
+        <div class="brand-row">
+          <svg width="60" height="60" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ogMarkGrad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FF8A4C" />
+                <stop offset="100%" stop-color="#FF4D6D" />
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="7" fill="#0B0B0F" />
+            <path d="M16 3.6 L27.2 9.8 V22.2 L16 28.4 L4.8 22.2 V9.8 Z" stroke="url(#ogMarkGrad)" stroke-width="1.4" fill="url(#ogMarkGrad)" fill-opacity="0.10" />
+            <path d="M13 14.5 V11.6 a3 3 0 0 1 6 0 V14.5" stroke="url(#ogMarkGrad)" stroke-width="1.8" fill="none" stroke-linecap="round" />
+            <rect x="10.5" y="14.5" width="11" height="8.5" rx="2.2" fill="url(#ogMarkGrad)" />
+            <circle cx="16" cy="18.4" r="1.15" fill="#0B0B0F" />
+            <rect x="15.5" y="19" width="1" height="2" fill="#0B0B0F" />
+          </svg>
+          <div class="wordmark display">SilentRFQ</div>
+        </div>
+
+        <div class="subtitle">Confidential Supplier Bidding Powered by Zama FHE</div>
+        <div class="tagline mono">Private bids. Verifiable outcome.</div>
+        <div class="url mono">silentrfq.xyz</div>
+      </div>
+
+      <div class="right">
+        <div class="card">
+          <div class="card-glow"></div>
+          <div class="card-header">
+            <div class="traffic"><span></span><span></span><span></span></div>
+            <div class="path mono">silentrfq / fhe-procurement-core</div>
+            <div class="live-badge mono"><span class="dot"></span>LIVE</div>
+          </div>
+          <div class="card-body">
+            <div>
+              <div class="section-label">Encrypted Bid Packets</div>
+              <div class="bid-row">
+                <div class="lock-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" fill="#93B7FE"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#93B7FE" stroke-width="2" fill="none"/></svg>
+                </div>
+                <div class="bid-meta">
+                  <div class="top-row mono"><span>VENDOR_01</span><span class="addr">0x456c...f1dc</span></div>
+                  <div class="cipher mono">bid: 0x1a4f8e...e839</div>
+                </div>
+              </div>
+              <div class="bid-row" style="margin-bottom:0;">
+                <div class="lock-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" fill="#93B7FE"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#93B7FE" stroke-width="2" fill="none"/></svg>
+                </div>
+                <div class="bid-meta">
+                  <div class="top-row mono"><span>VENDOR_02</span><span class="addr">0x3bdc...6798</span></div>
+                  <div class="cipher mono">bid: 0x8b2c1d...1f40</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="fhe-core">
+              <div class="fhe-label">FHE Comparison Core</div>
+              <div class="fhe-code mono">TFHE.min(euint64, euint64, euint64)</div>
+              <div class="fhe-sub mono">Zama FHEVM &middot; encrypted operands</div>
+            </div>
+
+            <div class="winner-box">
+              <div>
+                <div class="wl">Winner Verified</div>
+                <div class="addr mono">0x3BDC...6798</div>
+              </div>
+              <div class="check-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#0B0B0F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

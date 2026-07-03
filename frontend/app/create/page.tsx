@@ -3,20 +3,42 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { CheckCircle, Copy, ExternalLink, FileText, Lock, ShieldCheck, Trophy, Zap } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCircle,
+  Coins,
+  Copy,
+  ExternalLink,
+  Eye,
+  FileText,
+  Hash,
+  Lock,
+  MapPin,
+  Package,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import { DarkSelect } from "@/components/DarkSelect";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
 import { FACTORY_ADDRESS, FACTORY_MISSING_MESSAGE } from "@/config/contracts";
 import { useCreateRFQ } from "@/hooks/useFactory";
-
-const TEMPLATES = [
-  { label: "Office Supplies",  value: "500 reams of A4 paper, 80gsm, white" },
-  { label: "Industrial Parts", value: "200 units of M8x30mm hex bolts, stainless steel" },
-  { label: "Software License", value: "Enterprise SaaS license renewal, 50 seats, 12 months" },
-  { label: "Logistics",        value: "Monthly freight forwarding, 20ft container, Shanghai to Rotterdam" },
-];
+import {
+  CATEGORY_OPTIONS,
+  CURRENCY_OPTIONS,
+  UNIT_OPTIONS,
+  buildRFQDescription,
+  buildRFQTitle,
+  resolveCurrencyLabel,
+  resolveUnitLabel,
+  type StructuredRFQFields,
+} from "@/config/rfqDescription";
 
 const DEMO_RFQ_ADDRESS = "0x6272ea767fa6e6668173F5a4D532885ce1D2502E";
 
@@ -38,13 +60,54 @@ const SETUP_STEPS = [
   },
 ];
 
+const inputClass =
+  "w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none focus:shadow-[0_0_20px_rgba(255,210,8,0.08)] transition-all duration-200";
+
+const labelClass = "mb-2 block text-sm font-bold text-slate-200";
+
 export default function CreatePage() {
-  const [description, setDescription] = useState("");
+  // Structured RFQ fields
+  const [goods, setGoods] = useState("");
+  const [category, setCategory] = useState<string>(CATEGORY_OPTIONS[0]);
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState<string>(UNIT_OPTIONS[0]);
+  const [customUnit, setCustomUnit] = useState("");
+  const [currency, setCurrency] = useState<string>(CURRENCY_OPTIONS[0]);
+  const [customCurrency, setCustomCurrency] = useState("");
+  const [deliveryLocation, setDeliveryLocation] = useState("");
+  const [deliveryTarget, setDeliveryTarget] = useState("");
+  const [requirements, setRequirements] = useState("");
+  const [additionalTerms, setAdditionalTerms] = useState("");
+  const [titleOverride, setTitleOverride] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
+
   const [deadlineInput, setDeadlineInput] = useState("");
   const [deadlineError, setDeadlineError] = useState("");
+  const [formError, setFormError] = useState("");
   const [copied, setCopied] = useState(false);
+
   const { isConnected } = useAccount();
   const { create, hash, isPending, isConfirming, isSuccess, createdRFQAddress, error, reset } = useCreateRFQ();
+
+  const fields: StructuredRFQFields = {
+    goods,
+    category,
+    quantity,
+    unit,
+    customUnit,
+    currency,
+    customCurrency,
+    deliveryLocation,
+    deliveryTarget,
+    requirements,
+    additionalTerms,
+  };
+
+  const autoTitle = buildRFQTitle(fields);
+  const effectiveTitle = titleTouched ? titleOverride : autoTitle;
+  const unitLabel = resolveUnitLabel(unit, customUnit);
+  const currencyLabel = resolveCurrencyLabel(currency, customCurrency);
+  const generatedDescription = buildRFQDescription(effectiveTitle, fields);
 
   const validateDeadline = (value: string): string => {
     if (!value) return "";
@@ -57,13 +120,28 @@ export default function CreatePage() {
     setDeadlineError(validateDeadline(e.target.value));
   };
 
+  const validate = (): string => {
+    if (!goods.trim()) return "Goods / service needed is required.";
+    const qtyNum = Number(quantity);
+    if (!quantity.trim() || !(qtyNum > 0)) return "Quantity must be greater than 0.";
+    if (unit === "other" && !customUnit.trim()) return 'Custom unit is required when unit is "other".';
+    if (currency === "Other" && !customCurrency.trim()) return 'Custom currency is required when currency is "Other".';
+    if (!deadlineInput) return "Bid deadline is required.";
+    const deadlineErr = validateDeadline(deadlineInput);
+    if (deadlineErr) return deadlineErr;
+    return "";
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim() || !deadlineInput) return;
-    const err = validateDeadline(deadlineInput);
-    if (err) { setDeadlineError(err); return; }
+    const err = validate();
+    if (err) {
+      setFormError(err);
+      return;
+    }
+    setFormError("");
     const deadlineUnix = BigInt(Math.floor(new Date(deadlineInput).getTime() / 1000));
-    create(description.trim(), deadlineUnix);
+    create(generatedDescription, deadlineUnix);
   };
 
   const handleCopyAddress = () => {
@@ -73,12 +151,32 @@ export default function CreatePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const resetForm = () => {
+    reset();
+    setGoods("");
+    setCategory(CATEGORY_OPTIONS[0]);
+    setQuantity("");
+    setUnit(UNIT_OPTIONS[0]);
+    setCustomUnit("");
+    setCurrency(CURRENCY_OPTIONS[0]);
+    setCustomCurrency("");
+    setDeliveryLocation("");
+    setDeliveryTarget("");
+    setRequirements("");
+    setAdditionalTerms("");
+    setTitleOverride("");
+    setTitleTouched(false);
+    setDeadlineInput("");
+    setDeadlineError("");
+    setFormError("");
+    setCopied(false);
+  };
+
   if (isSuccess) {
     return (
       <div className="flex min-h-[72vh] flex-col items-center justify-center py-16 px-4">
         <ScrollReveal>
           <div className="w-full max-w-lg space-y-5">
-
             {/* Success card */}
             <div className="rounded-2xl border border-success/25 bg-success/[0.05] p-10 text-center space-y-5 shadow-[0_0_60px_rgba(16,185,129,0.07)]">
               <div
@@ -132,13 +230,12 @@ export default function CreatePage() {
                 Browse RFQs
               </Link>
               <button
-                onClick={() => { reset(); setDescription(""); setDeadlineInput(""); setCopied(false); }}
+                onClick={resetForm}
                 className="rounded-xl border border-white/[0.10] bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-300 hover:border-white/[0.18] hover:bg-white/[0.06] transition-all"
               >
                 Create Another
               </button>
             </div>
-
           </div>
         </ScrollReveal>
       </div>
@@ -154,8 +251,8 @@ export default function CreatePage() {
           </p>
           <h1 className="font-display text-4xl font-bold text-white">Create Confidential RFQ</h1>
           <p className="mt-3 max-w-xl text-sm text-slate-400">
-            Post a procurement request. Vendors submit encrypted price quotes using Zama FHE.
-            Bid amounts are never visible on-chain.
+            Post a structured procurement request. Vendors submit encrypted total price quotes
+            using Zama FHE. Bid amounts are never visible on-chain.
           </p>
         </div>
       </ScrollReveal>
@@ -166,36 +263,39 @@ export default function CreatePage() {
         </div>
       )}
 
+      {/* RFQ Mode selector */}
+      <ScrollReveal delay={40}>
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="relative rounded-2xl border border-zamaYellow/40 bg-zamaYellow/[0.06] p-5 shadow-[0_0_24px_rgba(255,210,8,0.06)]">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-bold text-white">Fixed quantity price quote</p>
+              <span className="rounded-full border border-zamaYellow/40 bg-zamaYellow/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-zamaYellow">
+                Active
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-400">
+              Buyer defines a fixed quantity. Vendors submit encrypted total price quotes for
+              fulfilling the full RFQ.
+            </p>
+          </div>
+          <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 opacity-50 cursor-not-allowed">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-400">Fixed budget quantity quote</p>
+              <span className="rounded-full border border-white/[0.10] bg-white/[0.05] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Coming soon
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-600">
+              Buyer defines a budget. Vendors compete on how much quantity they can supply.
+            </p>
+          </div>
+        </div>
+      </ScrollReveal>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
-        {/* Left: templates + explainer */}
+        {/* Left: explainer */}
         <div className="space-y-6 lg:col-span-2">
           <ScrollReveal delay={80}>
-            <div>
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                Quick Templates
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {TEMPLATES.map((t) => (
-                  <button
-                    key={t.label}
-                    type="button"
-                    onClick={() => setDescription(t.value)}
-                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all duration-200 hover:-translate-y-0.5
-                      ${
-                        description === t.value
-                          ? "border-zamaYellow/40 bg-zamaYellow/[0.08] font-semibold text-zamaYellow shadow-[0_0_16px_rgba(255,210,8,0.08)]"
-                          : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-zamaYellow/20 hover:bg-zamaYellow/[0.04] hover:text-white"
-                      }`}
-                  >
-                    <FileText className={`h-4 w-4 shrink-0 ${description === t.value ? "text-zamaYellow" : "text-slate-600"}`} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </ScrollReveal>
-
-          <ScrollReveal delay={120}>
             <div className="rounded-2xl border border-fheBlue/20 bg-fheBlue/[0.05] p-5">
               <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-fheBlueSoft">
                 How encrypted bidding works
@@ -217,7 +317,7 @@ export default function CreatePage() {
             </div>
           </ScrollReveal>
 
-          <ScrollReveal delay={140}>
+          <ScrollReveal delay={120}>
             <Link
               href={`/rfq/${DEMO_RFQ_ADDRESS}`}
               className="inline-flex items-center gap-2 text-sm font-bold text-fheBlueSoft hover:text-white transition-colors"
@@ -264,70 +364,317 @@ export default function CreatePage() {
               </div>
             ) : (
               <NetworkGuard>
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-200">
-                        Procurement Description
-                      </label>
-                      <input
-                        type="text"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="e.g. 500 units of industrial bolts, M8 x 30mm"
-                        required
-                        className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none focus:shadow-[0_0_20px_rgba(255,210,8,0.08)] transition-all duration-200"
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Goods / service */}
+                      <div>
+                        <label className={labelClass}>Goods / service needed</label>
+                        <div className="relative">
+                          <Package className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                          <input
+                            type="text"
+                            value={goods}
+                            onChange={(e) => setGoods(e.target.value)}
+                            placeholder="Business laptops"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Category */}
+                      <div>
+                        <label className={labelClass}>Category</label>
+                        <DarkSelect
+                          options={CATEGORY_OPTIONS}
+                          value={category}
+                          onChange={setCategory}
+                          icon={<Tag className="h-4 w-4" />}
+                        />
+                      </div>
+
+                      {/* Quantity + Unit */}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className={labelClass}>Quantity</label>
+                          <div className="relative">
+                            <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={quantity}
+                              onChange={(e) => setQuantity(e.target.value)}
+                              placeholder="100"
+                              required
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Unit</label>
+                          <DarkSelect options={UNIT_OPTIONS} value={unit} onChange={setUnit} />
+                          {unit === "other" && (
+                            <input
+                              type="text"
+                              value={customUnit}
+                              onChange={(e) => setCustomUnit(e.target.value)}
+                              placeholder="Custom unit"
+                              required
+                              className={`${inputClass} mt-2`}
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Currency */}
+                      <div>
+                        <label className={labelClass}>Currency</label>
+                        <DarkSelect
+                          options={CURRENCY_OPTIONS}
+                          value={currency}
+                          onChange={setCurrency}
+                          icon={<Coins className="h-4 w-4" />}
+                        />
+                        {currency === "Other" && (
+                          <input
+                            type="text"
+                            value={customCurrency}
+                            onChange={(e) => setCustomCurrency(e.target.value)}
+                            placeholder="Custom currency"
+                            required
+                            className={`${inputClass} mt-2`}
+                          />
+                        )}
+                        <p className="mt-1.5 text-xs text-slate-600">
+                          All vendors must submit their encrypted total price quote in this
+                          currency so bids can be compared fairly.
+                        </p>
+                      </div>
+
+                      {/* Delivery location + target */}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className={labelClass}>
+                            Delivery location <span className="font-normal text-slate-600">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                            <input
+                              type="text"
+                              value={deliveryLocation}
+                              onChange={(e) => setDeliveryLocation(e.target.value)}
+                              placeholder="Lagos office"
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className={labelClass}>
+                            Delivery target <span className="font-normal text-slate-600">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <CalendarClock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                            <input
+                              type="text"
+                              value={deliveryTarget}
+                              onChange={(e) => setDeliveryTarget(e.target.value)}
+                              placeholder="Within 14 days"
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Requirements */}
+                      <div>
+                        <label className={labelClass}>
+                          Requirements / specifications{" "}
+                          <span className="font-normal text-slate-600">(recommended)</span>
+                        </label>
+                        <textarea
+                          value={requirements}
+                          onChange={(e) => setRequirements(e.target.value)}
+                          placeholder="Each laptop should have at least 16GB RAM, 512GB SSD, Core i5 or equivalent processor, and Windows 11 Pro."
+                          rows={3}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {!requirements.trim() && (
+                          <p className="mt-1.5 text-xs text-slate-600">
+                            Recommended — clear requirements help vendors quote accurately.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Additional terms */}
+                      <div>
+                        <label className={labelClass}>
+                          Additional terms <span className="font-normal text-slate-600">(optional)</span>
+                        </label>
+                        <textarea
+                          value={additionalTerms}
+                          onChange={(e) => setAdditionalTerms(e.target.value)}
+                          placeholder="Quote should include delivery, basic setup, and warranty details."
+                          rows={2}
+                          className={`${inputClass} resize-none`}
+                        />
+                      </div>
+
+                      {/* Title override */}
+                      <div>
+                        <div className="mb-2 flex items-center justify-between">
+                          <label className="block text-sm font-bold text-slate-200">
+                            RFQ title <span className="font-normal text-slate-600">(auto-generated, editable)</span>
+                          </label>
+                          {titleTouched && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTitleTouched(false);
+                                setTitleOverride("");
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-fheBlueSoft hover:text-white transition-colors"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Reset to auto-generated
+                            </button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                          <input
+                            type="text"
+                            value={effectiveTitle}
+                            onChange={(e) => {
+                              setTitleTouched(true);
+                              setTitleOverride(e.target.value);
+                            }}
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Deadline */}
+                      <div>
+                        <label className={labelClass}>Bid Deadline</label>
+                        <input
+                          type="datetime-local"
+                          value={deadlineInput}
+                          onChange={handleDeadlineChange}
+                          required
+                          className={`${inputClass} ${deadlineError ? "border-danger/40 focus:border-danger/60 focus:ring-danger/20" : ""}`}
+                        />
+                        {deadlineError && <p className="mt-1.5 text-xs text-red-400">{deadlineError}</p>}
+                      </div>
+
+                      {formError && (
+                        <p className="rounded-xl border border-danger/20 bg-danger/[0.06] p-3 text-xs text-red-400">
+                          {formError}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={!FACTORY_ADDRESS || isPending || isConfirming}
+                        className="w-full rounded-xl bg-zamaYellow px-5 py-3 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_25px_rgba(255,210,8,0.3)] disabled:opacity-40 transition-all"
+                      >
+                        {isPending ? "Waiting for wallet..." : isConfirming ? "Confirming..." : "Create RFQ"}
+                      </button>
+                    </form>
+
+                    <div className="mt-4">
+                      <TxStatus
+                        isPending={isPending}
+                        isConfirming={isConfirming}
+                        isSuccess={isSuccess}
+                        error={error}
+                        hash={hash}
                       />
-                      <p className="mt-1.5 text-xs text-slate-600">
-                        Include quantity, specs, currency, and terms. For example: if prices are
-                        in NGN, vendors should submit their total quote in NGN.
+                    </div>
+                  </div>
+
+                  {/* RFQ Preview */}
+                  <div className="rounded-2xl border border-zamaYellow/20 bg-gradient-to-b from-zamaYellow/[0.04] to-transparent p-6">
+                    <div className="mb-4 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-zamaYellow" />
+                      <h3 className="text-sm font-bold text-white">RFQ Preview</h3>
+                      <span className="ml-auto font-mono text-[10px] text-slate-600">live</span>
+                    </div>
+
+                    <p className="mb-5 font-display text-lg font-bold leading-snug text-white">
+                      {effectiveTitle}
+                    </p>
+
+                    <div className="space-y-2.5 border-t border-white/[0.06] pt-4">
+                      <PreviewRow label="RFQ Type" value="Fixed quantity price quote" />
+                      <PreviewRow label="Category" value={category} />
+                      <PreviewRow label="Goods / Service" value={goods || "—"} />
+                      <PreviewRow label="Quantity" value={quantity ? `${quantity} ${unitLabel}` : "—"} />
+                      <PreviewRow label="Currency" value={currencyLabel} />
+                      {deliveryLocation.trim() && (
+                        <PreviewRow label="Delivery Location" value={deliveryLocation} />
+                      )}
+                      {deliveryTarget.trim() && <PreviewRow label="Delivery Target" value={deliveryTarget} />}
+                    </div>
+
+                    {requirements.trim() && (
+                      <div className="mt-4 border-t border-white/[0.06] pt-4">
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                          Requirements
+                        </p>
+                        <p className="text-xs leading-relaxed text-slate-400">{requirements}</p>
+                      </div>
+                    )}
+
+                    {additionalTerms.trim() && (
+                      <div className="mt-4 border-t border-white/[0.06] pt-4">
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                          Additional Terms
+                        </p>
+                        <p className="text-xs leading-relaxed text-slate-400">{additionalTerms}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 border-t border-fheBlue/15 pt-4">
+                      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-fheBlueSoft">
+                        <Lock className="h-3 w-3" />
+                        Vendor Instruction
+                      </p>
+                      <p className="text-xs leading-relaxed text-slate-400">
+                        Submit your encrypted total price quote in {currencyLabel} for fulfilling
+                        the full RFQ. The buyer has already defined the quantity, specifications,
+                        currency, and terms. Your bid amount should represent the total price for
+                        the full requirement.
                       </p>
                     </div>
 
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-200">
-                        Bid Deadline
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={deadlineInput}
-                        onChange={handleDeadlineChange}
-                        required
-                        className={`w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 transition-all
-                          [color-scheme:dark]
-                          ${
-                            deadlineError
-                              ? "border-danger/40 focus:border-danger/60 focus:ring-danger/20"
-                              : "border-white/[0.10] focus:border-zamaYellow/50 focus:ring-zamaYellow/30"
-                          }`}
-                      />
-                      {deadlineError && (
-                        <p className="mt-1.5 text-xs text-red-400">{deadlineError}</p>
-                      )}
+                    <div className="mt-4 border-t border-white/[0.06] pt-4">
+                      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                        <Eye className="h-3 w-3" />
+                        Privacy
+                      </p>
+                      <p className="text-xs leading-relaxed text-slate-500">
+                        Bid amounts are encrypted before being sent on-chain. Only the winning
+                        vendor is revealed after finalization and gateway reveal.
+                      </p>
                     </div>
-
-                    <button
-                      type="submit"
-                      disabled={!FACTORY_ADDRESS || !!deadlineError || isPending || isConfirming}
-                      className="w-full rounded-xl bg-zamaYellow px-5 py-3 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_25px_rgba(255,210,8,0.3)] disabled:opacity-40 transition-all"
-                    >
-                      {isPending ? "Waiting for wallet..." : isConfirming ? "Confirming..." : "Create RFQ"}
-                    </button>
-                  </form>
+                  </div>
                 </div>
-
-                <TxStatus
-                  isPending={isPending}
-                  isConfirming={isConfirming}
-                  isSuccess={isSuccess}
-                  error={error}
-                  hash={hash}
-                />
               </NetworkGuard>
             )}
           </ScrollReveal>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 text-xs">
+      <span className="shrink-0 font-medium text-slate-600">{label}</span>
+      <span className="text-right font-medium text-slate-300">{value}</span>
     </div>
   );
 }

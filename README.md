@@ -53,8 +53,13 @@ This is cryptographic privacy enforced by the protocol, not obfuscation or an of
 
 ## 4. Features
 
-- Buyer creates an RFQ with a description — including quantity, specs, currency, and terms — and a bid deadline via `SilentRFQFactory`.
-- Vendors submit an encrypted total price quote (TFHE `euint64`) for fulfilling the RFQ, using the Zama SDK — no plaintext price ever leaves the browser.
+SilentRFQ v1 supports fixed-quantity confidential price bidding. Buyers define goods, quantity,
+unit, currency, and requirements through a structured RFQ builder; vendors submit encrypted total
+price quotes in the buyer-selected currency. (A budget-based "vendors compete on quantity" mode is
+a possible future extension — not implemented in v1.)
+
+- Buyer creates a structured RFQ — goods, category, quantity, unit, currency, delivery, requirements, and terms — via a guided builder, deployed through `SilentRFQFactory`.
+- Vendors submit an encrypted total price quote (TFHE `euint64`) for fulfilling the RFQ, in the buyer-selected currency, using the Zama SDK — no plaintext price ever leaves the browser.
 - The contract homomorphically tracks the best bid and best vendor index across every submission.
 - Deadline enforcement is on-chain and non-negotiable.
 - Buyer finalizes after the deadline; the winning index becomes publicly decryptable.

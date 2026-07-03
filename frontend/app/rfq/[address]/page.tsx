@@ -11,6 +11,7 @@ import { LiveVerificationPanel } from "@/components/LiveVerificationPanel";
 import type { VerificationStatus } from "@/components/LiveVerificationPanel";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { PrivacyPanel } from "@/components/PrivacyPanel";
+import { ProcurementBrief } from "@/components/ProcurementBrief";
 import { RoleIndicator } from "@/components/RoleIndicator";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -18,6 +19,7 @@ import { TxStatus } from "@/components/TxStatus";
 import { WalletConnect } from "@/components/WalletConnect";
 import { EXPECTED_CHAIN_ID } from "@/config/contracts";
 import { useFinalize, useRFQ, useWinnerAddress } from "@/hooks/useRFQ";
+import { parseRFQDescription } from "@/config/rfqDescription";
 import { BidSection } from "./BidSection";
 import { RevealSection } from "./RevealSection";
 import type { RFQStatus } from "@/components/StatusBadge";
@@ -96,6 +98,8 @@ export default function RFQDetailPage() {
   if (winnerRevealed) verificationStatus = "revealed";
   else if (finalized) verificationStatus = "finalized";
 
+  const parsedDescription = parseRFQDescription(description);
+
   if (isLoading) {
     return (
       <div className="space-y-4 pt-4">
@@ -156,7 +160,7 @@ export default function RFQDetailPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">
-              {description ?? "RFQ Detail"}
+              {parsedDescription.title || description || "RFQ Detail"}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-slate-600 break-all">{rfqAddress}</span>
@@ -208,7 +212,7 @@ export default function RFQDetailPage() {
               </h2>
               <div className="space-y-5">
                 <InfoRow label="Buyer" value={<AddressCopy address={buyer} />} />
-                <InfoRow label="Description" value={description ?? "—"} />
+                <InfoRow label="Description" value={parsedDescription.title || description || "—"} />
                 <InfoRow
                   label="Deadline"
                   value={
@@ -239,6 +243,13 @@ export default function RFQDetailPage() {
               </div>
             </div>
           </ScrollReveal>
+
+          {/* Procurement Brief — only for structured RFQs; falls back safely for older ones */}
+          {parsedDescription.isStructured && (
+            <ScrollReveal delay={winnerRevealed ? 180 : 140}>
+              <ProcurementBrief parsed={parsedDescription} />
+            </ScrollReveal>
+          )}
 
           {/* Winner card */}
           {winnerRevealed && winnerAddr && (

@@ -5,6 +5,7 @@ import { ArrowRight, Calendar, Users } from "lucide-react";
 import { useRFQ } from "@/hooks/useRFQ";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { RFQStatus } from "@/components/StatusBadge";
+import { getRFQDisplayTitle } from "@/config/rfqDescription";
 
 function deriveStatus(
   finalized: boolean | undefined,
@@ -61,7 +62,7 @@ export function RFQCard({ address }: { address: `0x${string}` }) {
           <div className="pl-4">
             <div className="flex items-start justify-between gap-4">
               <p className="font-display font-bold text-base text-white leading-snug">
-                {description ?? "(no description)"}
+                {description ? getRFQDisplayTitle(description) : "(no description)"}
               </p>
               <div className="flex items-center gap-2 shrink-0 mt-0.5">
                 <StatusBadge status={status} />

@@ -151,8 +151,12 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                   className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none transition-all"
                 />
                 <p className="mt-1 text-xs text-slate-600">
-                  Submit your total price quote for fulfilling this RFQ. The amount is encrypted
-                  before being sent on-chain. Positive integer, max uint64.
+                  Submit your total price quote for fulfilling the full RFQ. The amount is
+                  encrypted before being sent on-chain. Positive integer, max uint64.
+                </p>
+                <p className="mt-1.5 text-xs text-fheBlueSoft/80">
+                  Use the currency defined in the RFQ requirements. SilentRFQ compares encrypted
+                  bid amounts, so all vendors should bid in the buyer-selected currency.
                 </p>
               </div>
 
