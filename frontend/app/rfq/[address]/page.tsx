@@ -7,6 +7,8 @@ import { useAccount } from "wagmi";
 import { CheckCircle, ChevronLeft, ExternalLink, Share2, ShieldCheck, Trophy } from "lucide-react";
 import { AddressCopy } from "@/components/AddressCopy";
 import { LifecycleTimeline } from "@/components/LifecycleTimeline";
+import { LiveVerificationPanel } from "@/components/LiveVerificationPanel";
+import type { VerificationStatus } from "@/components/LiveVerificationPanel";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { PrivacyPanel } from "@/components/PrivacyPanel";
 import { RoleIndicator } from "@/components/RoleIndicator";
@@ -89,6 +91,10 @@ export default function RFQDetailPage() {
   if (winnerRevealed) status = "revealed";
   else if (finalized) status = "finalized";
   else if (pastDeadline) status = "expired";
+
+  let verificationStatus: VerificationStatus = "open";
+  if (winnerRevealed) verificationStatus = "revealed";
+  else if (finalized) verificationStatus = "finalized";
 
   if (isLoading) {
     return (
@@ -176,6 +182,15 @@ export default function RFQDetailPage() {
           pastDeadline={pastDeadline}
           finalized={finalized ?? false}
           winnerRevealed={winnerRevealed ?? false}
+        />
+      </ScrollReveal>
+
+      {/* Live Verification */}
+      <ScrollReveal delay={winnerRevealed ? 160 : 100}>
+        <LiveVerificationPanel
+          rfqAddress={rfqAddress}
+          winnerAddress={winnerRevealed && winnerAddr ? (winnerAddr as `0x${string}`) : undefined}
+          status={verificationStatus}
         />
       </ScrollReveal>
 

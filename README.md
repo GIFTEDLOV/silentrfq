@@ -10,6 +10,8 @@ Quick links:
 - Network: Sepolia
 - Factory: `0xE2E283304863dF8C800094e39a8928D84BF330ec`
 
+Shared links carry a custom Open Graph preview image, so posts on X/LinkedIn render a clean SilentRFQ card instead of a bare URL.
+
 ---
 
 ![SilentRFQ home page — hero, animated FHE visual, proof strip](docs/screenshots/home.png)
@@ -51,13 +53,14 @@ This is cryptographic privacy enforced by the protocol, not obfuscation or an of
 
 ## 4. Features
 
-- Buyer creates an RFQ with a description and bid deadline via `SilentRFQFactory`.
-- Vendors submit TFHE-encrypted bid amounts (`euint64`) using the Zama SDK — no plaintext ever leaves the browser.
+- Buyer creates an RFQ with a description — including quantity, specs, currency, and terms — and a bid deadline via `SilentRFQFactory`.
+- Vendors submit an encrypted total price quote (TFHE `euint64`) for fulfilling the RFQ, using the Zama SDK — no plaintext price ever leaves the browser.
 - The contract homomorphically tracks the best bid and best vendor index across every submission.
 - Deadline enforcement is on-chain and non-negotiable.
 - Buyer finalizes after the deadline; the winning index becomes publicly decryptable.
 - Anyone can submit the Zama KMS proof to permissionlessly reveal the winner — no trusted intermediary, no buyer gatekeeping.
 - Losing bid amounts remain permanently encrypted, with no decrypt path ever granted.
+- Every RFQ page includes a Live Verification panel — one-click copy and Sepolia Etherscan links for the factory, RFQ, and winner addresses, no wallet required.
 - Full Sepolia-verified live demo with real encrypted bids, real finalize, real gateway reveal.
 
 ## 5. Architecture
@@ -115,12 +118,12 @@ Everything below is live and independently verifiable on Sepolia — no mocked d
 | **Completed RFQ** | `0x6272ea767fa6e6668173F5a4D532885ce1D2502E` |
 | **Winner** | `0x3BDCd4A4A6E4E11668b43004B52049b3167e6798` |
 
-Open the completed RFQ on the live app or on Sepolia Etherscan and confirm: the RFQ was finalized, `callbackRevealWinner` succeeded with a real KMS-signed proof, and the winner address matches `winnerAddress()` on-chain.
+Open the completed RFQ on the live app and confirm it yourself using the **Live Verification** panel on the RFQ detail page — it links directly to Sepolia Etherscan for the factory, the RFQ, and the winner, with no wallet connection required. Confirm: the RFQ was finalized, `callbackRevealWinner` succeeded with a real KMS-signed proof, and the winner address matches `winnerAddress()` on-chain.
 
 ## 7. Demo flow
 
 1. **Create** — Connect a Sepolia wallet, go to `/create`, submit a description and deadline. `SilentRFQFactory.createRFQ` deploys a new `SilentRFQ` contract.
-2. **Bid** — From a vendor wallet, open the RFQ and submit an encrypted bid. The Zama SDK encrypts the amount client-side into a `euint64` ciphertext with a validity proof before it's sent.
+2. **Bid** — From a vendor wallet, open the RFQ and submit an encrypted total price quote for fulfilling it. The Zama SDK encrypts the amount client-side into a `euint64` ciphertext with a validity proof before it's sent.
 3. **Compare (automatic)** — Each new bid is homomorphically compared against the current best bid on-chain. No plaintext value exists at any point.
 4. **Finalize** — After the deadline, the buyer calls `finalize()`. This registers the winning index for public decryption and grants the buyer private access to the winning bid amount.
 5. **Reveal** — Anyone submits the Zama KMS proof via `callbackRevealWinner`. The winner address becomes public. Every losing bid stays encrypted, permanently.

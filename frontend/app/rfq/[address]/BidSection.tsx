@@ -78,7 +78,8 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
       <div>
         <h2 className="font-display text-lg font-bold text-white">Submit Encrypted Bid</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Your bid is encrypted client-side before touching the chain.
+          Vendors submit encrypted price quotes for fulfilling the full RFQ. The buyer defines
+          quantity, specs, currency, and terms in the RFQ description above.
         </p>
       </div>
 
@@ -139,7 +140,7 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-400">
-                  Bid Amount (uint64)
+                  Encrypted total price quote
                 </label>
                 <input
                   type="text"
@@ -150,7 +151,8 @@ export function BidSection({ rfqAddress, buyerAddress, onSuccess }: Props) {
                   className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none transition-all"
                 />
                 <p className="mt-1 text-xs text-slate-600">
-                  Positive integer, max uint64. Encrypted before submission.
+                  Submit your total price quote for fulfilling this RFQ. The amount is encrypted
+                  before being sent on-chain. Positive integer, max uint64.
                 </p>
               </div>
 

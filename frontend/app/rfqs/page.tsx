@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { Plus, Wallet } from "lucide-react";
+import { Plus, ShieldCheck, Wallet } from "lucide-react";
 import { RFQCard } from "@/components/RFQCard";
 import { RFQStatsBar } from "@/components/RFQStatsBar";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -12,6 +12,8 @@ import { FACTORY_ADDRESS, FACTORY_MISSING_MESSAGE } from "@/config/contracts";
 import { useGetRFQs, useGetRFQsByBuyer } from "@/hooks/useFactory";
 
 type Tab = "all" | "mine";
+
+const DEMO_RFQ_ADDRESS = "0x6272ea767fa6e6668173F5a4D532885ce1D2502E";
 
 export default function RFQsPage() {
   const [tab, setTab] = useState<Tab>("all");
@@ -42,13 +44,22 @@ export default function RFQsPage() {
               Buyers post procurement requests. Vendors submit encrypted bids. Bid amounts are never exposed on-chain.
             </p>
           </div>
-          <Link
-            href="/create"
-            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-4 py-2.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.35)] transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            Create RFQ
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link
+              href={`/rfq/${DEMO_RFQ_ADDRESS}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-fheBlue/30 px-4 py-2.5 text-sm font-bold text-fheBlueSoft hover:bg-fheBlue/[0.08] hover:border-fheBlue/50 transition-all"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              View Verified Demo
+            </Link>
+            <Link
+              href="/create"
+              className="inline-flex items-center gap-2 rounded-xl bg-zamaYellow px-4 py-2.5 text-sm font-bold text-ink hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(255,210,8,0.35)] transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Create RFQ
+            </Link>
+          </div>
         </div>
       </ScrollReveal>
 

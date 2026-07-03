@@ -1,8 +1,58 @@
 import Link from "next/link";
-import { CheckCircle, Eye, FileLock2, Lock, ShieldCheck, ShieldOff, Shield, Trophy, Zap } from "lucide-react";
+import {
+  CheckCircle,
+  Eye,
+  FileLock2,
+  List,
+  Lock,
+  PlayCircle,
+  ShieldCheck,
+  ShieldOff,
+  Shield,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
 const DEMO_RFQ_ADDRESS = "0x6272ea767fa6e6668173F5a4D532885ce1D2502E";
+
+const DEMO_GUIDE_STEPS = [
+  {
+    step: "1",
+    icon: ShieldCheck,
+    title: "Open the verified RFQ",
+    desc: "See a completed RFQ with a real, live Sepolia contract address.",
+    href: `/rfq/${DEMO_RFQ_ADDRESS}`,
+  },
+  {
+    step: "2",
+    icon: Trophy,
+    title: "Check the revealed winner",
+    desc: "The winning vendor address was publicly decrypted via the Zama KMS gateway.",
+    href: `/rfq/${DEMO_RFQ_ADDRESS}`,
+  },
+  {
+    step: "3",
+    icon: Lock,
+    title: "Confirm losing bids remain encrypted",
+    desc: "Every other bid amount stays permanently unreadable on-chain.",
+    href: `/rfq/${DEMO_RFQ_ADDRESS}`,
+  },
+  {
+    step: "4",
+    icon: List,
+    title: "Browse all Sepolia RFQs",
+    desc: "The full dashboard — every RFQ is real and independently verifiable.",
+    href: "/rfqs",
+  },
+  {
+    step: "5",
+    icon: Zap,
+    title: "Create your own RFQ",
+    desc: "Deploy a confidential RFQ contract on Sepolia in under a minute.",
+    href: "/create",
+  },
+];
 
 const PROOF_STRIP = [
   { label: "Sepolia live", color: "#10B981" },
@@ -304,7 +354,7 @@ export default function HomePage() {
                   href={`/rfq/${DEMO_RFQ_ADDRESS}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-fheBlue/30 px-7 py-3.5 text-sm font-bold text-fheBlueSoft hover:bg-fheBlue/[0.08] hover:border-fheBlue/50 transition-all"
                 >
-                  View verified demo RFQ
+                  View Verified Demo
                 </Link>
               </div>
             </ScrollReveal>
@@ -333,6 +383,47 @@ export default function HomePage() {
             <ProofStrip />
           </div>
         </ScrollReveal>
+      </section>
+
+      {/* Demo guide — fastest judge path */}
+      <section className="border-t border-white/[0.06] pt-20">
+        <ScrollReveal>
+          <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="mb-5 text-xs font-bold tracking-[0.2em] uppercase text-fheBlueSoft">
+                Judge demo guide
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
+                Try the live demo.
+              </h2>
+            </div>
+            <Link
+              href={`/rfq/${DEMO_RFQ_ADDRESS}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-fheBlue/30 px-6 py-3 text-sm font-bold text-fheBlueSoft hover:bg-fheBlue/[0.08] hover:border-fheBlue/50 transition-all"
+            >
+              <PlayCircle className="h-4 w-4" />
+              View Verified Demo
+            </Link>
+          </div>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {DEMO_GUIDE_STEPS.map(({ step, icon: Icon, title, desc, href }, i) => (
+            <ScrollReveal key={step} delay={Math.min(i * 70, 210)}>
+              <Link href={href} className="group block h-full">
+                <div className="rounded-2xl border border-fheBlue/15 bg-gradient-to-b from-fheBlue/[0.05] to-transparent p-6 hover:border-fheBlue/35 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(47,107,255,0.10)] transition-all h-full">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-fheBlue/25 bg-fheBlue/[0.08] group-hover:bg-fheBlue/[0.16] transition-colors">
+                      <span className="font-display text-xs font-bold text-fheBlueSoft">{step}</span>
+                    </div>
+                    <Icon className="h-4 w-4 text-fheBlueSoft/60" />
+                  </div>
+                  <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
+                  <p className="text-xs leading-relaxed text-slate-400">{desc}</p>
+                </div>
+              </Link>
+            </ScrollReveal>
+          ))}
+        </div>
       </section>
 
       {/* Problem */}

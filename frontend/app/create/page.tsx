@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { CheckCircle, Copy, ExternalLink, FileText, Lock, Trophy, Zap } from "lucide-react";
+import { CheckCircle, Copy, ExternalLink, FileText, Lock, ShieldCheck, Trophy, Zap } from "lucide-react";
 import { NetworkGuard } from "@/components/NetworkGuard";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { TxStatus } from "@/components/TxStatus";
@@ -17,6 +17,8 @@ const TEMPLATES = [
   { label: "Software License", value: "Enterprise SaaS license renewal, 50 seats, 12 months" },
   { label: "Logistics",        value: "Monthly freight forwarding, 20ft container, Shanghai to Rotterdam" },
 ];
+
+const DEMO_RFQ_ADDRESS = "0x6272ea767fa6e6668173F5a4D532885ce1D2502E";
 
 const SETUP_STEPS = [
   {
@@ -200,8 +202,9 @@ export default function CreatePage() {
               </p>
               <ul className="space-y-2">
                 {[
-                  "Vendors encrypt amounts using the Zama SDK.",
-                  "Only ciphertexts land on-chain.",
+                  "Bid amount is the vendor's encrypted total price quote.",
+                  "The buyer defines quantity, specs, currency, and terms in the RFQ description.",
+                  "Vendors encrypt amounts using the Zama SDK — only ciphertexts land on-chain.",
                   "The contract compares bids via TFHE.",
                   "Only the winner index is publicly decrypted.",
                 ].map((item) => (
@@ -212,6 +215,16 @@ export default function CreatePage() {
                 ))}
               </ul>
             </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={140}>
+            <Link
+              href={`/rfq/${DEMO_RFQ_ADDRESS}`}
+              className="inline-flex items-center gap-2 text-sm font-bold text-fheBlueSoft hover:text-white transition-colors"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              View Verified Demo
+            </Link>
           </ScrollReveal>
         </div>
 
@@ -265,6 +278,10 @@ export default function CreatePage() {
                         required
                         className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-zamaYellow/50 focus:ring-1 focus:ring-zamaYellow/30 focus:outline-none focus:shadow-[0_0_20px_rgba(255,210,8,0.08)] transition-all duration-200"
                       />
+                      <p className="mt-1.5 text-xs text-slate-600">
+                        Include quantity, specs, currency, and terms. For example: if prices are
+                        in NGN, vendors should submit their total quote in NGN.
+                      </p>
                     </div>
 
                     <div>
